@@ -1,0 +1,169 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<issues format="6" by="lint 8.12.3" type="baseline" client="gradle" dependencies="false" name="AGP (8.12.3)" variant="all" version="8.12.3">
+
+    <issue
+        id="MissingClass"
+        message="Class referenced in the manifest, `com.snakesan.overseermobile.MainActivity`, was not found in the project or the libraries"
+        errorLine1="            android:name=&quot;.MainActivity&quot;"
+        errorLine2="                          ~~~~~~~~~~~~~">
+        <location
+            file="src/main/AndroidManifest.xml"
+            line="12"
+            column="27"/>
+    </issue>
+
+    <issue
+        id="RedundantLabel"
+        message="Redundant label can be removed"
+        errorLine1="            android:label=&quot;@string/app_name&quot;"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/AndroidManifest.xml"
+            line="14"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of com.google.android.gms:play-services-wearable than 18.1.0 is available: 20.0.1"
+        errorLine1="    implementation(&quot;com.google.android.gms:play-services-wearable:18.1.0&quot;)"
+        errorLine2="                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="build.gradle.kts"
+            line="62"
+            column="20"/>
+    </issue>
+
+    <issue
+        id="NewerVersionAvailable"
+        message="A newer version of org.jetbrains.kotlinx:kotlinx-coroutines-play-services than 1.7.3 is available: 1.11.0"
+        errorLine1="    implementation(&quot;org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.7.3&quot;)"
+        errorLine2="                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="build.gradle.kts"
+            line="63"
+            column="20"/>
+    </issue>
+
+    <issue
+        id="DataExtractionRules"
+        message="The attribute `android:allowBackup` is deprecated from Android 12 and the default allows backup"
+        errorLine1="        android:allowBackup=&quot;true&quot;"
+        errorLine2="                             ~~~~">
+        <location
+            file="src/main/AndroidManifest.xml"
+            line="5"
+            column="30"/>
+    </issue>
+
+    <issue
+        id="ObsoleteSdkInt"
+        message="Unnecessary; `SDK_INT` is always >= 36"
+        errorLine1="        dynamicColor &amp;&amp; Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {"
+        errorLine2="                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/snakesan/overseermobile/ui/theme/Theme.kt"
+            line="44"
+            column="25"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.color.purple_200` appears to be unused"
+        errorLine1="    &lt;color name=&quot;purple_200&quot;>#FFBB86FC&lt;/color>"
+        errorLine2="           ~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/colors.xml"
+            line="3"
+            column="12"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.color.purple_500` appears to be unused"
+        errorLine1="    &lt;color name=&quot;purple_500&quot;>#FF6200EE&lt;/color>"
+        errorLine2="           ~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/colors.xml"
+            line="4"
+            column="12"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.color.purple_700` appears to be unused"
+        errorLine1="    &lt;color name=&quot;purple_700&quot;>#FF3700B3&lt;/color>"
+        errorLine2="           ~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/colors.xml"
+            line="5"
+            column="12"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.color.teal_200` appears to be unused"
+        errorLine1="    &lt;color name=&quot;teal_200&quot;>#FF03DAC5&lt;/color>"
+        errorLine2="           ~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/colors.xml"
+            line="6"
+            column="12"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.color.teal_700` appears to be unused"
+        errorLine1="    &lt;color name=&quot;teal_700&quot;>#FF018786&lt;/color>"
+        errorLine2="           ~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/colors.xml"
+            line="7"
+            column="12"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.color.black` appears to be unused"
+        errorLine1="    &lt;color name=&quot;black&quot;>#FF000000&lt;/color>"
+        errorLine2="           ~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/colors.xml"
+            line="8"
+            column="12"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.color.white` appears to be unused"
+        errorLine1="    &lt;color name=&quot;white&quot;>#FFFFFFFF&lt;/color>"
+        errorLine2="           ~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/colors.xml"
+            line="9"
+            column="12"/>
+    </issue>
+
+    <issue
+        id="UseTomlInstead"
+        message="Use version catalog instead (com.google.android.gms:play-services-wearable is already available as `play-services-wearable`, but using version 19.0.0 instead)"
+        errorLine1="    implementation(&quot;com.google.android.gms:play-services-wearable:18.1.0&quot;)"
+        errorLine2="                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="build.gradle.kts"
+            line="62"
+            column="20"/>
+    </issue>
+
+    <issue
+        id="UseTomlInstead"
+        message="Use version catalog instead"
+        errorLine1="    implementation(&quot;org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.7.3&quot;)"
+        errorLine2="                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="build.gradle.kts"
+            line="63"
+            column="20"/>
+    </issue>
+
+</issues>

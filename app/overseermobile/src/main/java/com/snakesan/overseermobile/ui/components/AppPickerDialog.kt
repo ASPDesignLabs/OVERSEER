@@ -29,12 +29,19 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.core.graphics.drawable.toBitmap
 import com.snakesan.overseermobile.data.InstalledAppsProvider
 import com.snakesan.overseermobile.data.LaunchableApp
+import com.snakesan.overseermobile.ui.theme.CyberFieldShape
+import com.snakesan.overseermobile.ui.theme.CyberFont
+import com.snakesan.overseermobile.ui.theme.CyberPanelButton
+import com.snakesan.overseermobile.ui.theme.NeonCyan
+import com.snakesan.overseermobile.ui.theme.cyberTextFieldColors
 
 /** Full-screen filterable list of installed apps, for choosing a shortcut target. */
 @Composable
@@ -59,6 +66,9 @@ fun AppPickerDialog(onAppSelected: (LaunchableApp) -> Unit, onDismiss: () -> Uni
             Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
                 Text(
                     text = "CHOOSE AN APP",
+                    fontFamily = CyberFont,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 2.sp,
                     style = MaterialTheme.typography.headlineSmall,
                     color = MaterialTheme.colorScheme.primary
                 )
@@ -70,6 +80,8 @@ fun AppPickerDialog(onAppSelected: (LaunchableApp) -> Unit, onDismiss: () -> Uni
                     onValueChange = { query = it },
                     label = { Text("Search") },
                     singleLine = true,
+                    shape = CyberFieldShape,
+                    colors = cyberTextFieldColors(NeonCyan),
                     modifier = Modifier.fillMaxWidth()
                 )
 
@@ -96,7 +108,7 @@ fun AppPickerDialog(onAppSelected: (LaunchableApp) -> Unit, onDismiss: () -> Uni
                                 modifier = Modifier.padding(top = 24.dp)
                             )
                         } else {
-                            LazyColumn(modifier = Modifier.fillMaxSize()) {
+                            LazyColumn(modifier = Modifier.weight(1f).fillMaxWidth()) {
                                 items(filtered, key = { it.packageName }) { app ->
                                     AppRow(app = app, onClick = { onAppSelected(app) })
                                 }
@@ -105,15 +117,14 @@ fun AppPickerDialog(onAppSelected: (LaunchableApp) -> Unit, onDismiss: () -> Uni
                     }
                 }
 
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
+                Spacer(modifier = Modifier.height(12.dp))
+
+                CyberPanelButton(
                     text = "CANCEL",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable(onClick = onDismiss)
-                        .padding(vertical = 12.dp)
+                    modifier = Modifier.fillMaxWidth(),
+                    isActive = false,
+                    mainColor = NeonCyan,
+                    onClick = onDismiss
                 )
             }
         }

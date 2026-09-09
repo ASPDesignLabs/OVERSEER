@@ -13,7 +13,12 @@ val NeonPink = Color(0xFFFF0055)
 val NeonOrange = Color(0xFFFF9100)
 val NeonBlue = Color(0xFF2962FF)
 val NeonGold = Color(0xFFFFD700)
-val NeonDark = Color(0xFF121212)
+
+// Same void-black/graphite pairing ACK uses (ui/theme/Color.kt in that repo):
+// a near-black page background with a slightly lighter panel tone on top of
+// it, rather than one flat dark gray for both.
+val VoidBlack = Color(0xFF050505)
+val Graphite = Color(0xFF121212)
 
 /** Preset swatches offered when a user picks a color for a custom shortcut. */
 val ShortcutColorPresets = listOf(

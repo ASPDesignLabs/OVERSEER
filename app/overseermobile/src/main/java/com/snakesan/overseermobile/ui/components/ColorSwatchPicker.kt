@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -20,6 +19,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import com.snakesan.overseermobile.ui.theme.CyberSectionLabel
 import com.snakesan.overseermobile.ui.theme.ShortcutColorPresets
 
 private val PresetNames = listOf("CYAN", "PURPLE", "RED", "GREEN", "PINK", "ORANGE", "BLUE", "GOLD")
@@ -37,11 +37,7 @@ fun ColorSwatchPicker(
     modifier: Modifier = Modifier
 ) {
     Column(modifier = modifier) {
-        Text(
-            text = "WEDGE COLOR",
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
+        CyberSectionLabel(text = "WEDGE COLOR", color = MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(modifier = Modifier.size(8.dp))
 
         val rows = ShortcutColorPresets.mapIndexed { index, color -> index to color }.chunked(4)

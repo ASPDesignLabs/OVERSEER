@@ -3,6 +3,7 @@ package com.snakesan.overseermobile.ui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -12,13 +13,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -29,8 +26,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.snakesan.overseermobile.data.LaunchableApp
@@ -41,11 +41,18 @@ import com.snakesan.overseermobile.data.WedgeSlot
 import com.snakesan.overseermobile.ui.components.AppPickerDialog
 import com.snakesan.overseermobile.ui.components.ColorSwatchPicker
 import com.snakesan.overseermobile.ui.components.representativeColor
+import com.snakesan.overseermobile.ui.theme.CyberFieldShape
+import com.snakesan.overseermobile.ui.theme.CyberFont
+import com.snakesan.overseermobile.ui.theme.CyberPanelButton
 import com.snakesan.overseermobile.ui.theme.DefaultShortcutColor
+import com.snakesan.overseermobile.ui.theme.Graphite
+import com.snakesan.overseermobile.ui.theme.NeonCyan
+import com.snakesan.overseermobile.ui.theme.cyberTextFieldColors
 
 private enum class EditorMode { FUNCTION, SHORTCUT }
 
 private val WedgePositionNames = listOf("Wedge 1", "Wedge 2", "Wedge 3")
+private val DialogPanelShape = CutCornerShape(16.dp)
 
 /**
  * Edits a single wedge. Nothing takes effect until Save is pressed —
@@ -96,11 +103,15 @@ fun WedgeEditorDialog(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(24.dp)
-                .background(MaterialTheme.colorScheme.background)
+                .background(Graphite, DialogPanelShape)
+                .border(1.dp, NeonCyan.copy(alpha = 0.5f), DialogPanelShape)
                 .padding(24.dp)
         ) {
             Text(
                 text = "EDIT ${WedgePositionNames.getOrElse(slot.position) { "WEDGE" }.uppercase()}",
+                fontFamily = CyberFont,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 2.sp,
                 style = MaterialTheme.typography.headlineSmall,
                 color = MaterialTheme.colorScheme.primary
             )
@@ -137,12 +148,12 @@ fun WedgeEditorDialog(
                 )
                 Spacer(modifier = Modifier.height(12.dp))
 
-                OutlinedButton(
-                    onClick = { showAppPicker = true },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(shortcutPackage?.let { "APP: $shortcutLabel" } ?: "CHOOSE APP")
-                }
+                CyberPanelButton(
+                    text = shortcutPackage?.let { "APP: $shortcutLabel" } ?: "CHOOSE APP",
+                    modifier = Modifier.fillMaxWidth(),
+                    mainColor = shortcutColor,
+                    onClick = { showAppPicker = true }
+                )
 
                 Spacer(modifier = Modifier.height(16.dp))
 
@@ -151,6 +162,8 @@ fun WedgeEditorDialog(
                     onValueChange = { shortcutLabel = it },
                     label = { Text("Label shown on the watch") },
                     singleLine = true,
+                    shape = CyberFieldShape,
+                    colors = cyberTextFieldColors(shortcutColor),
                     modifier = Modifier.fillMaxWidth()
                 )
 
@@ -166,15 +179,22 @@ fun WedgeEditorDialog(
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                TextButton(onClick = onDismiss) { Text("CANCEL") }
-                Spacer(modifier = Modifier.width(8.dp))
-                Button(
-                    onClick = ::attemptSave,
-                    enabled = canSave,
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
-                ) { Text("SAVE", color = MaterialTheme.colorScheme.onPrimary) }
+                CyberPanelButton(
+                    text = "CANCEL",
+                    modifier = Modifier.weight(1f),
+                    isActive = false,
+                    mainColor = NeonCyan,
+                    onClick = onDismiss
+                )
+                CyberPanelButton(
+                    text = "SAVE",
+                    modifier = Modifier.weight(1f),
+                    isActive = canSave,
+                    mainColor = NeonCyan,
+                    onClick = { if (canSave) attemptSave() }
+                )
             }
         }
     }
@@ -217,18 +237,27 @@ fun WedgeEditorDialog(
 
 @Composable
 private fun ModeToggle(mode: EditorMode, onModeChange: (EditorMode) -> Unit) {
+    val haptic = LocalHapticFeedback.current
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         listOf(EditorMode.FUNCTION to "FUNCTION", EditorMode.SHORTCUT to "SHORTCUT").forEach { (value, label) ->
             val isSelected = value == mode
+            val interactionSource = remember { MutableInteractionSource() }
             Text(
                 text = label,
-                style = MaterialTheme.typography.labelLarge,
-                color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+                fontFamily = CyberFont,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 2.sp,
+                fontSize = 12.sp,
+                color = if (isSelected) NeonCyan else MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier
                     .weight(1f)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant)
-                    .clickable { onModeChange(value) }
+                    .height(40.dp)
+                    .background(if (isSelected) NeonCyan.copy(alpha = 0.1f) else Graphite, CyberFieldShape)
+                    .border(1.dp, if (isSelected) NeonCyan else androidx.compose.ui.graphics.Color.DarkGray, CyberFieldShape)
+                    .clickable(interactionSource = interactionSource, indication = null) {
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        onModeChange(value)
+                    }
                     .padding(vertical = 12.dp),
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center
             )
@@ -244,31 +273,36 @@ private fun FunctionOptionRow(
     occupiedLabel: String?,
     onClick: () -> Unit
 ) {
+    val haptic = LocalHapticFeedback.current
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .background(Graphite, CyberFieldShape)
             .border(
-                width = if (isSelected) 2.dp else 0.dp,
-                color = function.representativeColor(),
-                shape = RoundedCornerShape(8.dp)
+                width = if (isSelected) 2.dp else 1.dp,
+                color = if (isSelected) function.representativeColor() else androidx.compose.ui.graphics.Color.DarkGray,
+                shape = CyberFieldShape
             )
-            .clickable(onClick = onClick)
+            .clickable {
+                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                onClick()
+            }
             .padding(12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         androidx.compose.foundation.layout.Box(
             modifier = Modifier
-                .size(20.dp)
-                .clip(CircleShape)
-                .background(function.representativeColor())
+                .size(16.dp)
+                .background(function.representativeColor(), CutCornerShape(3.dp))
         )
         Spacer(modifier = Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = function.displayName,
-                style = MaterialTheme.typography.bodyLarge,
+                fontFamily = CyberFont,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 1.sp,
+                fontSize = 14.sp,
                 color = MaterialTheme.colorScheme.onSurface
             )
             if (occupiedElsewhere && occupiedLabel != null) {

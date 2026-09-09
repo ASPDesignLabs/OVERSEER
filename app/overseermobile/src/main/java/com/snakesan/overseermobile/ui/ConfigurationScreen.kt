@@ -1,5 +1,6 @@
 package com.snakesan.overseermobile.ui
 
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -10,9 +11,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -28,11 +28,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.snakesan.overseermobile.data.WedgeSlot
 import com.snakesan.overseermobile.ui.components.WedgeCard
 import com.snakesan.overseermobile.ui.components.WedgeRingPreview
+import com.snakesan.overseermobile.ui.theme.CyberPanelButton
+import com.snakesan.overseermobile.ui.theme.NeonPink
 import java.text.DateFormat
 import java.util.Date
 
@@ -71,6 +75,8 @@ fun ConfigurationScreen(viewModel: ConfigViewModel = viewModel()) {
             Text(
                 text = "OVERSEER // WEDGE CONFIG",
                 style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 2.sp,
                 color = MaterialTheme.colorScheme.primary
             )
 
@@ -83,7 +89,11 @@ fun ConfigurationScreen(viewModel: ConfigViewModel = viewModel()) {
             Spacer(modifier = Modifier.height(16.dp))
 
             LazyColumn(
-                modifier = Modifier.weight(1f),
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .border(1.dp, MaterialTheme.colorScheme.surfaceVariant, CutCornerShape(12.dp))
+                    .padding(12.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 items(uiState.config.wedges.sortedBy { it.position }, key = { it.position }) { slot ->
@@ -95,23 +105,20 @@ fun ConfigurationScreen(viewModel: ConfigViewModel = viewModel()) {
 
             uiState.lastSyncedMillis?.let { millis ->
                 Text(
-                    text = "Last synced: ${DateFormat.getDateTimeInstance().format(Date(millis))}",
+                    text = "LAST SYNCED: ${DateFormat.getDateTimeInstance().format(Date(millis))}",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
             }
 
-            Button(
-                onClick = { showPushConfirm = true },
-                enabled = uiState.syncStatus !is SyncStatus.InFlight,
+            CyberPanelButton(
+                text = if (uiState.syncStatus is SyncStatus.InFlight) "SYNCING…" else "PUSH TO WATCH",
                 modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
+                isActive = uiState.syncStatus !is SyncStatus.InFlight,
+                mainColor = NeonPink
             ) {
-                Text(
-                    text = if (uiState.syncStatus is SyncStatus.InFlight) "SYNCING…" else "PUSH TO WATCH",
-                    color = MaterialTheme.colorScheme.onSecondary
-                )
+                if (uiState.syncStatus !is SyncStatus.InFlight) showPushConfirm = true
             }
         }
     }

@@ -50,12 +50,9 @@ captures/
 .idea/gradle.xml
 .idea/misc.xml
 
-# Keystore files: debug.keystore is intentionally committed below (shared
-# debug signing cert, default android/android passwords, not a secret).
-# Any OTHER keystore or signing credentials file must never be committed.
+# Keystore and signing credential files must never be committed.
 *.jks
 *.keystore
-!debug.keystore
 key.properties
 keystore.properties
 

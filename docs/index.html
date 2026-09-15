@@ -1,0 +1,1763 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>OVERSEER</title>
+<meta name="description" content="OVERSEER is a Wear OS watch face that replaces the clock with a live status readout from three companion apps — VITALITY.sys, ACK, and NEONFLUX — plus the phone app that configures it." />
+<meta name="theme-color" content="#050505" />
+<link rel="canonical" href="https://aspdesignlabs.github.io/OVERSEER/" />
+
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="OVERSEER" />
+<meta property="og:url" content="https://aspdesignlabs.github.io/OVERSEER/" />
+<meta property="og:title" content="OVERSEER — a wrist that reports in" />
+<meta property="og:description" content="A Wear OS watch face that replaces the clock with a live status readout from three companion apps, plus the phone app that configures it." />
+<meta name="twitter:card" content="summary" />
+<meta name="twitter:title" content="OVERSEER — a wrist that reports in" />
+<meta name="twitter:description" content="A Wear OS watch face that replaces the clock with a live status readout from three companion apps, plus the phone app that configures it." />
+
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23050505'/%3E%3Ccircle cx='16' cy='16' r='11' fill='none' stroke='%2300f3ff' stroke-width='3'/%3E%3Cline x1='16' y1='16' x2='16' y2='9' stroke='%2300f3ff' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E" />
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Orbitron:wght@600;700;800;900&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* neutrals shared with the NEONFLUX project page, for a consistent
+       ASPDesignLabs look across both — accents below stay OVERSEER's own */
+    --void:#050505;
+    --graphite:#121212;
+    --graphite-2:#1a1a1a;
+    --border:#2a2a2a;
+    --border-bright:#3a3a3a;
+    --ink:#e8e8e8;
+    --ink-dim:#a8a8a8;
+    --ink-faint:#767676;
+
+    --cyan:#00f3ff;
+    --green:#00ff41;
+    --orange:#ff9100;
+    --red:#ff003c;
+    --purple:#d500f9;
+    --gold:#ffd700;
+    --pink:#ff0055;
+
+    --font-display:"Chakra Petch", "Segoe UI", sans-serif;
+    --font-clock:"Orbitron", "Chakra Petch", "Segoe UI", sans-serif;
+    --font-body:"IBM Plex Sans", "Segoe UI", sans-serif;
+    --font-mono:"IBM Plex Mono", "SFMono-Regular", Consolas, monospace;
+    --statusbar-h:40px;
+  }
+
+  *{box-sizing:border-box;}
+  html{-webkit-font-smoothing:antialiased;}
+  @media (prefers-reduced-motion:reduce){
+    *{animation-duration:.001ms !important; animation-iteration-count:1 !important; transition-duration:.001ms !important;}
+  }
+  body{
+    margin:0;
+    background:var(--void);
+    color:var(--ink);
+    font-family:var(--font-body);
+    line-height:1.6;
+  }
+
+  ::selection{ background:var(--cyan); color:var(--void); }
+
+  .skip-link{
+    position:absolute; left:-999px; top:0;
+    background:var(--cyan); color:var(--void); font-family:var(--font-mono);
+    font-weight:700; padding:.9em 1.4em; z-index:100; text-decoration:none;
+  }
+  .skip-link:focus{ left:1em; top:1em; }
+
+  a{ color:var(--cyan); }
+  a:focus-visible, button:focus-visible, .mode-btn:focus-visible{
+    outline:2px solid var(--cyan);
+    outline-offset:3px;
+  }
+
+  .bg-grid-page{
+    position:fixed; inset:0; z-index:-1;
+    background-image:
+      linear-gradient(var(--border) 1px, transparent 1px),
+      linear-gradient(90deg, var(--border) 1px, transparent 1px);
+    background-size:44px 44px;
+    background-position:center;
+    opacity:.3;
+    mask-image:radial-gradient(ellipse 80% 60% at 50% 0%, black 40%, transparent 90%);
+  }
+
+  .wrap{ max-width:1040px; margin:0 auto; padding:0 28px; }
+
+  .eyebrow{
+    font-family:var(--font-mono);
+    font-size:12px;
+    letter-spacing:.18em;
+    text-transform:uppercase;
+    color:var(--ink-dim);
+  }
+
+  h1,h2,h3{
+    font-family:var(--font-display);
+    text-transform:uppercase;
+    letter-spacing:.04em;
+    text-wrap:balance;
+    margin:0;
+  }
+
+  /* ---------- STATUS BAR ---------- */
+  .statusbar{
+    position:sticky; top:0; z-index:40; height:var(--statusbar-h);
+    display:flex; align-items:center; justify-content:space-between;
+    padding:0 24px; background:var(--void); border-bottom:1px solid var(--border);
+    font-family:var(--font-mono); font-size:12px;
+  }
+  .statusbar-name{ color:var(--ink-dim); letter-spacing:.1em; }
+  .statusbar-name b{ color:var(--cyan); }
+  details.deck-select{ position:relative; }
+  details.deck-select > summary{
+    list-style:none; cursor:pointer; color:var(--cyan); letter-spacing:.12em;
+    font-weight:700; display:inline-flex; align-items:center; gap:.35rem;
+    min-height:40px; padding:4px 2px;
+  }
+  details.deck-select > summary::-webkit-details-marker{ display:none; }
+  details.deck-select > summary::marker{ content:""; }
+  details.deck-select[open] > summary{ color:var(--green); }
+  details.deck-select > summary .car{ transition:transform .15s ease; display:inline-block; }
+  details.deck-select[open] > summary .car{ transform:rotate(180deg); }
+  .deck-select-menu{
+    position:absolute; top:calc(100% + 8px); right:0; min-width:200px;
+    background:var(--graphite); border:1px solid var(--cyan);
+    box-shadow:0 20px 40px rgba(0,0,0,.6); padding:.4rem 0; z-index:20;
+  }
+  .deck-select-menu a{ display:block; padding:.55rem 1rem; color:var(--ink-dim); text-decoration:none; font-size:.78rem; }
+  .deck-select-menu a:hover, .deck-select-menu a:focus-visible{ color:var(--cyan); background:rgba(0,243,255,.06); }
+  .deck-select-menu .soon{ opacity:.45; pointer-events:none; }
+
+  /* ---------- HERO ---------- */
+  .hero{ padding:56px 0 48px; max-width:66ch; }
+  .hero h1{
+    font-size:clamp(40px,7vw,64px);
+    font-weight:700;
+    color:var(--ink);
+    line-height:.95;
+    margin-top:10px;
+  }
+  .hero h1 span{ color:var(--cyan); }
+  .hero p.lede{ font-size:17px; color:var(--ink-dim); margin-top:18px; max-width:52ch; }
+  .hero-actions{ margin-top:26px; display:flex; gap:14px; flex-wrap:wrap; }
+  .btn{
+    font-family:var(--font-mono); font-size:13px; letter-spacing:.06em; text-transform:uppercase;
+    text-decoration:none; padding:11px 20px; display:inline-flex; align-items:center; gap:8px;
+    clip-path:polygon(10px 0,100% 0,100% calc(100% - 10px),calc(100% - 10px) 100%,0 100%,0 10px);
+    transition:filter .15s ease; border:none; cursor:pointer; background:transparent;
+  }
+  .btn:hover{ filter:brightness(1.2); }
+  .btn-primary{ background:var(--cyan); color:var(--void); font-weight:600; }
+  .btn-ghost{ background:transparent; color:var(--ink); border:1px solid var(--border-bright); }
+
+  /* ---------- SECTION SCAFFOLDING ---------- */
+  section{ padding:52px 0; border-top:1px solid var(--border); }
+  section > .eyebrow{ margin-bottom:10px; }
+  section h2{ font-size:clamp(24px,3.4vw,32px); color:var(--ink); }
+  .section-lede{ max-width:62ch; color:var(--ink-dim); margin-top:14px; font-size:15.5px; }
+
+  /* ---------- DECK SCAFFOLDING (ported pattern from the NEONFLUX page) ---------- */
+  .deck-eyebrow{
+    text-align:center; font-family:var(--font-mono); text-transform:uppercase;
+    letter-spacing:.15em; color:var(--ink-faint); font-size:.7rem; font-weight:700; margin:0 0 1.1rem;
+  }
+  .watch-frame{
+    width:min(100%,300px); aspect-ratio:1/1; margin:0 auto;
+    background:#000; border:10px solid #1c1c1c; border-radius:50%;
+    box-shadow:0 30px 60px rgba(0,0,0,.55), inset 0 0 0 2px var(--border);
+    padding:10px;
+  }
+  .watch-screen{ position:relative; width:100%; height:100%; border-radius:50%; overflow:hidden; background:var(--void); }
+  .watch-screen svg{ position:absolute; inset:0; width:100%; height:100%; display:block; }
+
+  .bg-grid-layer{
+    position:absolute; inset:-60%; z-index:0;
+    background-image:
+      linear-gradient(rgba(120,130,135,.22) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(120,130,135,.22) 1px, transparent 1px);
+    background-size:26px 26px;
+  }
+  .bg-grid-layer.fast{
+    background-image:
+      linear-gradient(rgba(0,243,255,.16) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,243,255,.16) 1px, transparent 1px);
+    animation:driftFast 3s linear infinite;
+  }
+  .bg-grid-layer.slow{ animation:driftSlow 8s linear infinite; }
+  @keyframes driftSlow{ from{ transform:translate(0,0);} to{ transform:translate(26px,26px);} }
+  @keyframes driftFast{ from{ transform:translate(0,0);} to{ transform:translate(26px,26px);} }
+
+  .bg-pcb{ position:absolute; inset:0; z-index:0; }
+  .pcb-trace{ fill:none; stroke-width:2.4; stroke-linecap:round; stroke-linejoin:round; opacity:.85;
+    stroke-dasharray:18 130; animation-name:flowTrace; animation-timing-function:linear; animation-iteration-count:infinite; }
+  @keyframes flowTrace{ to{ stroke-dashoffset:-600; } }
+  .pcb-node{ opacity:.9; }
+
+  .watch-screen[data-bgmode="grid"] .bg-pcb{ display:none; }
+  .watch-screen[data-bgmode="pcb"] .bg-grid-layer{ display:none; }
+
+  @keyframes burnInJitter{
+    0%{ transform:scale(1); } 25%{ transform:scale(.94); }
+    50%{ transform:scale(.97); } 75%{ transform:scale(.91); } 100%{ transform:scale(1); }
+  }
+  .watch-screen[data-mode="ambient"] .dial-fg{ animation:burnInJitter 8s steps(4) infinite; }
+
+  /* ---------- PHONE CHROME (companion app decks) ---------- */
+  .phone-frame{
+    width:min(100%,300px); margin:0 auto; background:var(--void);
+    border:2px solid var(--border); border-radius:30px; /* the one place a real rounded corner belongs -- a physical device */
+    padding:14px 14px 20px; box-shadow:0 30px 60px rgba(0,0,0,.55);
+    position:relative;
+  }
+  .phone-notch{ width:60px; height:6px; margin:0 auto 14px; background:var(--border); border-radius:3px; }
+  .phone-screen{ text-align:left; position:relative; }
+
+  .cfg-title{
+    font-family:var(--font-display); font-weight:700; letter-spacing:.08em; font-size:15px;
+    color:var(--cyan); text-transform:uppercase; margin-bottom:14px;
+  }
+  .cfg-ring{ display:block; width:170px; height:170px; margin:0 auto 16px; }
+  .wedge-card{
+    display:flex; align-items:center; gap:12px; padding:12px 13px;
+    background:var(--graphite); border:1px solid color-mix(in srgb, var(--accent) 55%, transparent);
+    clip-path:polygon(9px 0,100% 0,100% calc(100% - 9px),calc(100% - 9px) 100%,0 100%,0 9px);
+    margin-bottom:9px; cursor:pointer; transition:background .12s ease;
+  }
+  .wedge-card:hover{ background:var(--graphite-2); }
+  .wedge-color-marker{ width:22px; height:22px; flex:none; background:var(--accent); clip-path:polygon(5px 0,100% 0,100% calc(100% - 5px),calc(100% - 5px) 100%,0 100%,0 5px); }
+  .wedge-card-text{ flex:1; min-width:0; }
+  .wedge-card-pos{ font-family:var(--font-mono); font-weight:700; font-size:11.5px; letter-spacing:.06em; color:var(--accent); }
+  .wedge-card-kind{ font-size:10.5px; color:var(--ink-faint); margin-top:2px; }
+  .wedge-card-label{ font-size:14px; color:var(--ink); margin-top:2px; font-weight:600; }
+  .wedge-card-edit{ font-family:var(--font-mono); font-weight:700; font-size:10px; letter-spacing:.08em; color:var(--cyan); flex:none; }
+
+  .cfg-last-synced{ font-size:11px; color:var(--ink-faint); margin:10px 0 12px; }
+  .cfg-push-btn{
+    width:100%; padding:13px; background:var(--graphite); color:var(--pink);
+    border:1px solid var(--pink); font-family:var(--font-mono); font-weight:700; font-size:12px; letter-spacing:.14em;
+    clip-path:polygon(10px 0,100% 0,100% calc(100% - 10px),calc(100% - 10px) 100%,0 100%,0 10px);
+    cursor:pointer;
+  }
+  .cfg-push-btn:hover{ background:rgba(255,0,85,.1); }
+
+  .cfg-modal-backdrop{
+    position:absolute; inset:-14px -14px -20px; background:rgba(0,0,0,.8);
+    display:none; align-items:center; justify-content:center; z-index:10; border-radius:30px;
+  }
+  .cfg-modal-backdrop.is-open{ display:flex; }
+  .cfg-modal{
+    background:var(--graphite-2); border:1px solid var(--pink); padding:18px;
+    width:84%; clip-path:polygon(12px 0,100% 0,100% calc(100% - 12px),calc(100% - 12px) 100%,0 100%,0 12px);
+  }
+  .cfg-modal h4{ font-family:var(--font-display); color:var(--ink); font-size:14px; margin:0 0 8px; text-transform:none; letter-spacing:0; }
+  .cfg-modal p{ font-size:12.5px; color:var(--ink-dim); margin:0 0 16px; }
+  .cfg-modal-actions{ display:flex; justify-content:flex-end; gap:16px; }
+  .cfg-modal-actions button{
+    background:none; border:none; color:var(--cyan); font-family:var(--font-mono); font-weight:700;
+    font-size:11.5px; letter-spacing:.08em; cursor:pointer; padding:4px;
+  }
+  .cfg-toast{
+    position:absolute; left:14px; right:14px; bottom:16px; background:var(--green); color:var(--void);
+    font-family:var(--font-mono); font-weight:700; font-size:11px; letter-spacing:.06em; text-align:center;
+    padding:10px; opacity:0; transform:translateY(8px); transition:opacity .2s ease, transform .2s ease; pointer-events:none;
+  }
+  .cfg-toast.is-shown{ opacity:1; transform:translateY(0); }
+
+  /* ---------- Deck 8: Wedge Editor ---------- */
+  .editor-card{
+    background:var(--graphite); border:1px solid rgba(0,243,255,.5);
+    clip-path:polygon(14px 0,100% 0,100% calc(100% - 14px),calc(100% - 14px) 100%,0 100%,0 14px);
+    padding:18px;
+  }
+  .editor-title{
+    font-family:var(--font-display); font-weight:700; letter-spacing:.06em; font-size:15px;
+    color:var(--cyan); text-transform:uppercase; margin-bottom:14px;
+  }
+  .editor-tabs{ display:flex; gap:10px; margin-bottom:14px; }
+  .editor-tab{
+    flex:1; text-align:center; padding:10px 0; font-family:var(--font-mono); font-weight:700;
+    font-size:11px; letter-spacing:.1em; color:var(--ink-dim); background:var(--graphite-2);
+    border:1px solid var(--border-bright); clip-path:polygon(6px 0,100% 0,100% calc(100% - 6px),calc(100% - 6px) 100%,0 100%,0 6px);
+    cursor:pointer;
+  }
+  .editor-tab[aria-pressed="true"]{ color:var(--cyan); background:rgba(0,243,255,.08); border-color:var(--cyan); }
+  .editor-desc{ font-size:12px; color:var(--ink-dim); margin-bottom:12px; line-height:1.5; }
+
+  .func-row{
+    display:flex; align-items:center; gap:10px; padding:10px 11px; margin-bottom:8px;
+    background:var(--graphite-2); border:1px solid #3a3a3a; cursor:pointer;
+    clip-path:polygon(6px 0,100% 0,100% calc(100% - 6px),calc(100% - 6px) 100%,0 100%,0 6px);
+  }
+  .func-row[aria-pressed="true"]{ border-width:2px; border-color:var(--fn-color); padding:9px 10px; }
+  .func-icon{ width:14px; height:14px; flex:none; background:var(--fn-color); clip-path:polygon(3px 0,100% 0,100% calc(100% - 3px),calc(100% - 3px) 100%,0 100%,0 3px); }
+  .func-text{ flex:1; min-width:0; }
+  .func-label{ font-family:var(--font-mono); font-weight:700; font-size:12.5px; letter-spacing:.04em; color:var(--ink); }
+  .func-occupied{ font-size:10.5px; color:var(--ink-faint); margin-top:2px; }
+
+  .shortcut-choose-btn{
+    width:100%; padding:11px; background:var(--graphite-2); color:var(--cyan); border:1px solid var(--cyan);
+    font-family:var(--font-mono); font-weight:700; font-size:11.5px; letter-spacing:.08em;
+    clip-path:polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px);
+    cursor:pointer; position:relative;
+  }
+  .shortcut-label-field{
+    width:100%; margin-top:12px; padding:11px 12px; background:var(--graphite-2); color:var(--ink);
+    border:1px solid #444; font-family:var(--font-body); font-size:13px;
+    clip-path:polygon(6px 0,100% 0,100% calc(100% - 6px),calc(100% - 6px) 100%,0 100%,0 6px);
+  }
+  .shortcut-label-field::placeholder{ color:var(--ink-faint); }
+  .swatch-section-label{ font-family:var(--font-mono); font-weight:700; font-size:10.5px; letter-spacing:.08em; color:var(--ink-dim); margin:16px 0 10px; }
+  .swatch-row{ display:flex; flex-wrap:wrap; gap:12px; }
+  .swatch-dot{ width:30px; height:30px; border-radius:50%; cursor:pointer; border:2.5px solid transparent; }
+  .swatch-dot[aria-pressed="true"]{ border-color:#fff; }
+
+  .editor-actions{ display:flex; gap:10px; margin-top:16px; }
+  .editor-actions button{
+    flex:1; padding:11px; background:var(--graphite-2); font-family:var(--font-mono); font-weight:700;
+    font-size:11px; letter-spacing:.1em; cursor:pointer;
+    clip-path:polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px);
+  }
+  .editor-actions .btn-cancel{ color:var(--ink-dim); border:1px solid var(--border-bright); }
+  .editor-actions .btn-save{ color:var(--cyan); border:1px solid var(--cyan); }
+  .editor-actions .btn-save:disabled{ color:rgba(0,243,255,.35); border-color:rgba(0,243,255,.2); cursor:default; }
+
+  .app-picker-mini{
+    position:absolute; left:0; right:0; top:calc(100% + 4px); background:var(--graphite-2);
+    border:1px solid var(--cyan); z-index:5; box-shadow:0 12px 24px rgba(0,0,0,.5);
+  }
+  .app-picker-row{ display:flex; align-items:center; gap:10px; padding:10px 12px; font-size:13px; color:var(--ink); cursor:pointer; }
+  .app-picker-row:hover{ background:rgba(0,243,255,.08); }
+  .app-picker-icon{ width:22px; height:22px; flex:none; background:var(--ink-faint); clip-path:circle(50%); }
+
+  .ack-bg{
+    position:absolute; inset:0; z-index:0;
+    background-image:linear-gradient(90deg, var(--ack-tint, var(--purple)) 1px, transparent 1px);
+    background-size:22px 100%;
+    opacity:.14;
+  }
+
+  .dial-fg{ z-index:2; pointer-events:none; }
+  .bezel-text{ font-family:var(--font-mono); font-weight:700; font-size:13px; letter-spacing:.02em; }
+  .clock-time{ font-family:var(--font-clock); font-weight:800; fill:var(--cyan); text-anchor:middle; filter:url(#clockGlow); }
+  .clock-secs{ font-family:var(--font-clock); font-weight:700; fill:var(--cyan); fill-opacity:.55; text-anchor:middle; }
+
+  .mode-row{ display:flex; justify-content:center; gap:10px; margin-top:20px; }
+  .mode-btn{
+    font-family:var(--font-mono); font-size:11px; font-weight:700; letter-spacing:.1em;
+    padding:8px 16px; background:var(--graphite); color:var(--ink-dim); border:1px solid var(--border-bright);
+    clip-path:polygon(7px 0,100% 0,100% calc(100% - 7px),calc(100% - 7px) 100%,0 100%,0 7px);
+    cursor:pointer;
+  }
+  .mode-btn[aria-pressed="true"]{ color:var(--cyan); border-color:var(--cyan); background:rgba(0,243,255,.08); }
+
+  .watch-caption{
+    text-align:center; color:var(--ink-faint); font-size:.82rem; max-width:48ch; margin:.9rem auto 0;
+  }
+
+  .deck-copy{ text-align:left; color:var(--ink-dim); font-size:.9rem; max-width:56ch; margin:1.6rem auto 0; }
+  .deck-copy p{ margin:0 0 .85rem; }
+  .deck-copy h3{ font-family:var(--font-display); color:var(--ink); font-size:.82rem; letter-spacing:.04em; margin:1.3rem 0 .5rem; text-transform:uppercase; }
+  .deck-copy h3:first-child{ margin-top:0; }
+  .deck-copy ul{ padding-left:1.15rem; margin:0 0 .85rem; }
+  .deck-copy li{ margin-bottom:.5rem; }
+  .deck-copy code{ font-family:var(--font-mono); background:var(--graphite-2); padding:.08em .35em; border:1px solid var(--border); font-size:.85em; color:var(--green); }
+  .fact-note{
+    background:var(--graphite-2); border-left:2px solid var(--orange); padding:.85rem 1rem; margin:1.1rem 0;
+    font-size:.82rem; color:var(--ink-dim);
+  }
+  .fact-note strong{ color:var(--orange); font-family:var(--font-mono); }
+
+  /* ---------- MODULE PANELS ---------- */
+  .modules{ margin-top:32px; display:grid; gap:18px; }
+  .module{ position:relative; background:var(--graphite); clip-path:polygon(20px 0,100% 0,100% calc(100% - 20px),calc(100% - 20px) 100%,0 100%,0 20px); padding:1px; }
+  .module::before{
+    content:""; position:absolute; inset:0; clip-path:inherit;
+    background:linear-gradient(135deg, var(--edge, var(--border-bright)) 0%, transparent 40%, transparent 60%, var(--edge, var(--border-bright)) 100%);
+    opacity:.55; pointer-events:none;
+  }
+  .module-inner{
+    position:relative; background:var(--graphite);
+    clip-path:polygon(19px 1px,100% 1px,100% calc(100% - 19px),calc(100% - 19px) 100%,1px 100%,1px 19px);
+    padding:26px 28px 24px; display:grid; grid-template-columns:minmax(0,1fr) auto; gap:20px 28px;
+  }
+  .module-head{ display:flex; align-items:baseline; gap:12px; flex-wrap:wrap; }
+  .module-name{ font-family:var(--font-display); font-weight:700; font-size:22px; letter-spacing:.03em; color:var(--accent); }
+  .module-pkg{ font-family:var(--font-mono); font-size:11.5px; color:var(--ink-faint); }
+  .module-repo-link{ font-family:var(--font-mono); font-size:11px; color:var(--accent); text-decoration:none; margin-left:auto; }
+  .module-repo-link:hover{ text-decoration:underline; }
+  .module-desc{ margin-top:10px; color:var(--ink); max-width:56ch; font-size:15px; }
+  .chips{ display:flex; flex-wrap:wrap; gap:8px; margin-top:14px; }
+  .chip{
+    font-family:var(--font-mono); font-size:11px; letter-spacing:.03em; padding:5px 9px; color:var(--accent);
+    background:color-mix(in srgb, var(--accent) 12%, transparent); border:1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+    clip-path:polygon(6px 0,100% 0,100% calc(100% - 6px),calc(100% - 6px) 100%,0 100%,0 6px);
+  }
+  .module-gesture{ align-self:start; display:flex; flex-direction:column; gap:8px; min-width:150px; padding-left:20px; border-left:1px solid var(--border); }
+  .gesture-row{ font-family:var(--font-mono); font-size:12px; display:flex; justify-content:space-between; gap:10px; color:var(--ink-dim); }
+  .gesture-row b{ color:var(--ink); font-weight:500; }
+
+  /* ---------- FOOTER ---------- */
+  footer{ padding:44px 0 60px; border-top:1px solid var(--border); display:flex; justify-content:space-between; align-items:flex-end; gap:20px; flex-wrap:wrap; }
+  footer .meta{ font-family:var(--font-mono); font-size:12px; color:var(--ink-faint); }
+  footer .meta div + div{ margin-top:4px; }
+
+  @media (max-width:760px){
+    .module-inner{ grid-template-columns:1fr; }
+    .module-gesture{ border-left:none; border-top:1px solid var(--border); padding-left:0; padding-top:14px; flex-direction:row; flex-wrap:wrap; }
+    .ring-layout{ grid-template-columns:1fr; }
+    .ring-diagram{ justify-self:center; }
+  }
+</style>
+</head>
+<body>
+
+<a class="skip-link" href="#main">Skip to main content</a>
+
+<div class="bg-grid-page"></div>
+
+<header class="statusbar">
+  <span class="statusbar-name"><b>OVERSEER</b> // ASPDesignLabs</span>
+  <details class="deck-select">
+    <summary>DECKS <span class="car" aria-hidden="true">&#9662;</span></summary>
+    <div class="deck-select-menu">
+      <a href="#deck-dial">01 The Dial</a>
+      <a href="#deck-zones">02 Zones</a>
+      <a href="#deck-ack">03 ACK Control</a>
+      <a href="#deck-options">04 Options</a>
+      <a href="#deck-emergency">05 Emergency Stop</a>
+      <a href="#deck-ambient">06 Ambient Mode</a>
+      <a href="#deck-config">07 Configuration</a>
+      <a href="#deck-editor">08 Wedge Editor</a>
+    </div>
+  </details>
+</header>
+
+<div class="wrap" id="main">
+  <header class="hero">
+    <p class="eyebrow">ASPDesignLabs / OVERSEER &nbsp;·&nbsp; Wear OS watch face</p>
+    <h1>A wrist that <span>reports in.</span></h1>
+    <p class="lede">
+      OVERSEER is a replacement for your existing Wear OS watch face. Quick
+      at-a-glance information from each experience, tailored to reduce the
+      need to open apps on the phone. Make sure the right phrase is lined up
+      for an ACK gesture, get a hint for why you might feel off, enable
+      grounding haptics with NEONFLUX.
+    </p>
+    <div class="hero-actions">
+      <a class="btn btn-primary" href="https://github.com/ASPDesignLabs/OVERSEER">View the source →</a>
+      <a class="btn btn-ghost" href="#modules">View the apps powering OVERSEER</a>
+    </div>
+  </header>
+
+  <section>
+    <p class="eyebrow">Why OVERSEER?</p>
+    <h2>Grounding, status, and speech support without an app drawer</h2>
+    <p class="section-lede">
+      OVERSEER makes accessing the support offered by ACK, VITALITY.sys, and
+      NEONFLUX easy. From tracking water consumption throughout the day, to
+      switching contextual replies in ACK, even executing a grounding
+      exercise via NEONFLUX. View state information from ACK, track your HP
+      via VITALITY.sys, view the currently running haptic profile under
+      NEONFLUX. Built around a specific set of needs, configurable to your own.
+    </p>
+  </section>
+
+  <section id="deck-dial">
+    <p class="deck-eyebrow">Deck 01 // The Dial</p>
+
+    <div class="watch-frame">
+      <div class="watch-screen" id="watchScreen" data-bgmode="grid"
+           role="img"
+           aria-label="OVERSEER watch face, active mode, grid background. Outer ring reads, clockwise from upper right: H2O status NOM in cyan, HP 65 in gold, a meal reminder reading REQ MEAL in orange; along the bottom, the ACK deck reads HOME in purple; along the left, FLUX reads THROB, running at 80 BPM, 100 percent intensity, with Sleep Protocol enabled, shown in cyan. Three small inner gauges show RAM, battery, and power usage. The center shows the current time in a glowing digital typeface.">
+        <div class="bg-grid-layer slow" aria-hidden="true"></div>
+        <div class="bg-grid-layer fast" aria-hidden="true"></div>
+
+        <svg class="bg-pcb" viewBox="0 0 320 320" aria-hidden="true">
+          <defs>
+            <filter id="traceGlow" x="-50%" y="-50%" width="200%" height="200%">
+              <feGaussianBlur stdDeviation="1.6" result="blur"/>
+              <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+          </defs>
+          <g id="pcbTraces" filter="url(#traceGlow)"></g>
+        </svg>
+
+        <svg class="dial-fg" viewBox="0 0 320 320" aria-hidden="true">
+          <defs>
+            <filter id="arcGlow" x="-60%" y="-60%" width="220%" height="220%">
+              <feGaussianBlur stdDeviation="7" result="b"/>
+              <feMerge><feMergeNode in="b"/></feMerge>
+            </filter>
+            <filter id="clockGlow" x="-60%" y="-60%" width="220%" height="220%">
+              <feGaussianBlur stdDeviation="2.4" result="b"/>
+              <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+            <path id="tp-topright"></path>
+            <path id="tp-bottom"></path>
+            <path id="tp-left"></path>
+          </defs>
+
+          <circle cx="160" cy="160" r="154" fill="none" stroke="var(--border)" stroke-width="1"></circle>
+
+          <!-- Outer telemetry ring: drawn near the physical edge, thick, one
+               continuous band per module (Compose's drawArc with no explicit
+               topLeft/size uses the full canvas as its bounding box, so the
+               real arc rides right against the bezel). -->
+          <path id="glow-hp" fill="none" stroke="var(--gold)" stroke-width="30" stroke-linecap="butt" opacity="0.35" filter="url(#arcGlow)"></path>
+          <path id="track-hp" fill="none" stroke="var(--gold)" stroke-opacity="0.18" stroke-width="20"></path>
+          <path id="arc-hp" fill="none" stroke="var(--gold)" stroke-width="20" stroke-linecap="butt"></path>
+          <path id="arc-ack" fill="none" stroke="var(--purple)" stroke-width="20" stroke-linecap="butt"></path>
+          <path id="arc-flux" fill="none" stroke="var(--cyan)" stroke-width="20" stroke-linecap="butt"></path>
+
+          <path id="gtrack-ram" fill="none" stroke="#333" stroke-width="5"></path>
+          <path id="gtrack-bat" fill="none" stroke="#333" stroke-width="5"></path>
+          <path id="gtrack-pwr" fill="none" stroke="#333" stroke-width="5"></path>
+          <path id="gauge-ram" fill="none" stroke="var(--red)" stroke-width="5"></path>
+          <path id="gauge-bat" fill="none" stroke="var(--green)" stroke-width="5"></path>
+          <path id="gauge-pwr" fill="none" stroke="var(--green)" stroke-width="5"></path>
+
+          <text class="bezel-text"><textPath href="#tp-topright" startOffset="2"><tspan fill="var(--cyan)">H2O NOM   </tspan><tspan fill="var(--gold)" font-size="15">HP 65   </tspan><tspan fill="var(--orange)">REQ MEAL</tspan></textPath></text>
+          <text class="bezel-text"><textPath href="#tp-bottom" startOffset="50%" text-anchor="middle"><tspan fill="var(--purple)">HOME</tspan></textPath></text>
+          <text class="bezel-text"><textPath href="#tp-left" startOffset="2"><tspan fill="var(--cyan)" font-weight="700">THROB </tspan><tspan fill="var(--cyan)" font-weight="600">// 80 BPM // 100% // SLP</tspan></textPath></text>
+
+          <text class="clock-time" x="160" y="168" font-size="42" id="clockTime"></text>
+          <text class="clock-secs" x="160" y="195" font-size="17" id="clockSecs"></text>
+        </svg>
+      </div>
+    </div>
+
+    <div class="mode-row">
+      <button type="button" class="mode-btn" id="btnGrid" aria-pressed="true">GRID</button>
+      <button type="button" class="mode-btn" id="btnPcb" aria-pressed="false">PCB</button>
+    </div>
+    <p class="watch-caption">
+      Live recreation, not a screenshot — telemetry values match the reference photo you sent.
+      Toggle the background: GRID is what ships today; PCB is fully built in the app but not switched on by default.
+    </p>
+
+    <div class="deck-copy">
+      <h3>What's a meter vs. a state</h3>
+      <p>
+        Only the <strong>HP</strong> arc is a meter — it fills proportionally
+        (65% here) and sits over its own faint always-on track, with a soft
+        glow behind it once overcharge crosses 50%, which is also what turns
+        it gold instead of its usual green. The <strong>ACK</strong> arc and
+        the <strong>FLUX</strong> arc are always drawn at their full length;
+        what changes is their color and opacity, not how much of the ring
+        they cover. Offline drops any of the three to dark gray; ambient
+        mode drops everything to flat gray or transparent.
+      </p>
+
+      <h3>Two backgrounds, one dial</h3>
+      <p>
+        <code>bgMode</code> swaps what renders behind the arcs — a
+        dual-speed drifting grid (two overlaid layers, one at 8s per cycle,
+        one at 3s) or procedurally generated PCB traces with animated
+        signal pulses, a live rainbow shader, and gyroscope-driven parallax
+        on the physical watch.
+      </p>
+      <div class="fact-note">
+        <strong>Currently gated:</strong> <code>ENABLE_PCB_LAYOUT = false</code>
+        in the source — PCB mode exists, runs, and is what you're seeing in
+        the toggle above, but it isn't reachable in the shipped app yet.
+      </div>
+
+      <h3>Curved, not straight</h3>
+      <p>
+        The color ring itself rides right at the edge of the display —
+        Compose draws it with no explicit bounding box, so it defaults to
+        the full canvas. Every label sits nested just <em>inside</em> that
+        ring, not floating beyond it toward the bezel, matching Wear
+        Compose's <code>curvedText</code>. Labels in the upper half of the
+        ring (H2O/HP/MEAL, FLUX) read outward, left-to-right, clockwise.
+        The ACK label sits centered on the bottom of the ring, so it reads
+        the opposite way — right-to-left in path terms, glyphs facing
+        inward — which is the only way text at the bottom of a circle
+        avoids rendering upside-down.
+      </p>
+    </div>
+  </section>
+
+  <section id="deck-zones">
+    <p class="deck-eyebrow">Deck 02 // Zones</p>
+
+    <div class="watch-frame">
+      <div class="watch-screen" data-bgmode="grid"
+           role="img"
+           aria-label="Zone map of the watch face. Three 120-degree sectors, boundaries at 12, 4, and 8 o'clock: upper-right is VITALITY.SYS, tap launches it directly, hold kills it. Bottom is ACK, tap opens an on-face control overlay instead of launching an app, hold kills it. Upper-left is NEONFLUX, tap launches it directly, hold kills it. A dashed circle at 35 percent of the radius marks where a tap instead opens the Options overlay. A smaller dashed circle at 25 percent marks where a long-press instead kills every app at once.">
+        <div class="bg-grid-layer slow" aria-hidden="true"></div>
+        <div class="bg-grid-layer fast" aria-hidden="true"></div>
+
+        <svg class="dial-fg" viewBox="0 0 320 320" aria-hidden="true">
+          <circle cx="160" cy="160" r="154" fill="none" stroke="var(--border)" stroke-width="1"></circle>
+
+          <path id="zone-vitality" fill="var(--green)" fill-opacity="0.16" stroke="var(--green)" stroke-opacity="0.5" stroke-width="1"></path>
+          <path id="zone-ack" fill="var(--cyan)" fill-opacity="0.16" stroke="var(--cyan)" stroke-opacity="0.5" stroke-width="1"></path>
+          <path id="zone-flux" fill="var(--pink)" fill-opacity="0.16" stroke="var(--pink)" stroke-opacity="0.5" stroke-width="1"></path>
+
+          <g id="zoneBoundaries" stroke="var(--border-bright)" stroke-width="1" stroke-dasharray="3 4"></g>
+
+          <circle id="tapCircle" cx="160" cy="160" r="0" fill="none" stroke="var(--ink-dim)" stroke-width="1.5" stroke-dasharray="4 4"></circle>
+          <circle id="holdCircle" cx="160" cy="160" r="0" fill="none" stroke="var(--red)" stroke-width="1.5" stroke-dasharray="4 4"></circle>
+          <circle cx="160" cy="160" r="8" fill="var(--void)" stroke="var(--red)" stroke-width="1.5"></circle>
+
+          <text id="lbl-vitality" text-anchor="middle" font-family="var(--font-mono)" font-weight="700" fill="var(--green)" font-size="13"></text>
+          <text id="lbl-ack" text-anchor="middle" font-family="var(--font-mono)" font-weight="700" fill="var(--cyan)" font-size="13"></text>
+          <text id="lbl-flux" text-anchor="middle" font-family="var(--font-mono)" font-weight="700" fill="var(--pink)" font-size="13"></text>
+
+          <text x="160" y="196" text-anchor="middle" font-family="var(--font-mono)" font-weight="700" fill="var(--ink-dim)" font-size="10">TAP 35%</text>
+          <text x="160" y="182" text-anchor="middle" font-family="var(--font-mono)" font-weight="700" fill="var(--red)" font-size="9">HOLD 25%</text>
+        </svg>
+      </div>
+    </div>
+
+    <p class="watch-caption">
+      No single screen recreates this one — it's the tap/hold behavior of the whole face, mapped out.
+    </p>
+
+    <div class="deck-copy">
+      <h3>Three slices, not three arcs</h3>
+      <p>
+        The gesture zones aren't read off the color arcs at runtime — they're
+        three hardcoded 120° sectors, computed from <code>atan2(dy, dx) + 90</code>
+        on every tap. But their boundaries land, almost to the degree, on the
+        midpoints of the 6° gaps between the arcs (12, 4, and 8 o'clock) — so
+        the zone you tap lines up with the color you're looking at, even
+        though the code never checks the arc itself.
+      </p>
+      <ul>
+        <li><strong>VITALITY.SYS</strong> (upper right) — tap launches the app directly.</li>
+        <li><strong>ACK</strong> (bottom) — tap does <em>not</em> launch ACK. It opens an on-face control overlay instead — see Deck 3.</li>
+        <li><strong>NEONFLUX</strong> (upper left) — tap launches the app directly.</li>
+      </ul>
+      <p>Long-press anywhere in a zone kills that app instead, gated by a confirm screen — see Deck 5.</p>
+
+      <h3>Two different centers</h3>
+      <p>
+        Tap the middle 35% of the face and you get the Options overlay
+        (Deck 4). Long-press has to land inside a <em>smaller</em> 25%
+        to kill everything — it's checked as a separate radius, not the
+        same boundary as the tap.
+      </p>
+      <div class="fact-note">
+        <strong>The gap in between:</strong> a long-press landing between
+        25% and 35% of the radius falls outside the "kill everything"
+        circle, so it's treated as an outer-zone press — killing whichever
+        app that angle points to, not the tap target directly under your
+        finger.
+      </div>
+    </div>
+  </section>
+
+  <section id="deck-ack">
+    <p class="deck-eyebrow">Deck 03 // ACK Control</p>
+
+    <div class="watch-frame">
+      <div class="watch-screen" id="ackScreen" data-mode="deck"
+           role="img"
+           aria-label="ACK Control overlay, full-screen, in DECK mode. Two small indicator marks and the text DECK slash slash CONTROL sit near the top. Centered below, the current deck name HOME is shown in a bordered box, purple. Below that, left and right chevrons. At the bottom, an INIT CRYO button in red. A small down chevron at the very top dismisses the overlay.">
+        <div class="ack-bg" id="ackBg" aria-hidden="true"></div>
+
+        <svg class="dial-fg" viewBox="0 0 320 320" aria-hidden="true">
+          <circle cx="160" cy="160" r="154" fill="none" stroke="var(--border)" stroke-width="1"></circle>
+
+          <text x="160" y="58" text-anchor="middle" fill="var(--ink-faint)" font-size="16">&#9660;</text>
+
+          <g id="ackModeRow">
+            <rect id="ackDash1" width="9" height="4.5" fill="var(--border-bright)"></rect>
+            <rect id="ackDash2" width="9" height="4.5" fill="var(--border-bright)"></rect>
+            <text id="ackModeLabel" x="160" y="99" text-anchor="middle" font-family="var(--font-mono)" font-weight="700" font-size="11" letter-spacing="1"></text>
+          </g>
+
+          <g id="ackDeckContent">
+            <path id="ackDeckBox" fill="none" stroke-width="1.5"></path>
+            <text id="ackDeckName" x="160" y="172" text-anchor="middle" font-family="var(--font-clock)" font-weight="800" font-size="26"></text>
+          </g>
+
+          <g id="ackTargetContent" style="display:none">
+            <text id="ackTargetName" x="160" y="168" text-anchor="middle" font-family="var(--font-clock)" font-weight="800" font-size="24" fill="var(--green)"></text>
+            <text x="160" y="189" text-anchor="middle" font-family="var(--font-mono)" font-weight="700" font-size="11" fill="var(--ink-dim)" letter-spacing="1">SLOT [ 3 ]</text>
+            <text x="160" y="207" text-anchor="middle" font-family="var(--font-mono)" font-size="9" fill="var(--ink-faint)">LINKED: GO BACK</text>
+          </g>
+
+          <text x="130" y="240" text-anchor="middle" fill="currentColor" font-size="13" opacity="0.5" id="ackArrowL">&#8249;</text>
+          <text x="190" y="240" text-anchor="middle" fill="currentColor" font-size="13" opacity="0.5" id="ackArrowR">&#8250;</text>
+
+          <path id="ackCryoBox" fill="none" stroke="var(--red)" stroke-width="1.5"></path>
+          <text id="ackCryoLabel" x="160" y="271" text-anchor="middle" font-family="var(--font-mono)" font-weight="700" font-size="11" letter-spacing="1" fill="var(--red)">INIT CRYO</text>
+        </svg>
+      </div>
+    </div>
+
+    <div class="mode-row">
+      <button type="button" class="mode-btn" id="btnAckDeck" aria-pressed="true">DECK</button>
+      <button type="button" class="mode-btn" id="btnAckTarget" aria-pressed="false">TARGET</button>
+    </div>
+    <p class="watch-caption">
+      A real screen, not a diagram — this is what covers the whole face
+      when you tap the ACK zone. Toggle DECK / TARGET to see both modes;
+      on the watch that same switch happens on long-press.
+    </p>
+
+    <div class="deck-copy">
+      <h3>One overlay, two jobs</h3>
+      <p>
+        <strong>DECK mode</strong> pages through configured ACK decks.
+        <strong>TARGET mode</strong> pages through that deck's nine link
+        slots (eight targets plus a <code>CLEAR</code> / disengage slot).
+        Long-press anywhere on the overlay flips between them — there's no
+        button for it, just the same hold gesture reused for a different
+        purpose than it has out on the dial.
+      </p>
+
+      <h3>Three ways to page</h3>
+      <ul>
+        <li><strong>Rotary crown / bezel:</strong> the primary input — each detent past a small scroll threshold sends <code>NEXT_DECK</code>/<code>PREV_DECK</code> or <code>SET_TARGET:&lt;n&gt;</code> to ACK over a broadcast.</li>
+        <li><strong>Tap left / right:</strong> the same two commands, for watches without a usable crown — but only in the top 70% of the screen, so it doesn't compete with the CRYO button below.</li>
+        <li><strong>Everything sends a matching haptic buzz and a short synth tone</strong> — confirmation you don't have to look for.</li>
+      </ul>
+
+      <h3>CRYO</h3>
+      <p>
+        A dedicated sleep toggle for ACK itself, independent of DECK/TARGET
+        mode. <code>INIT CRYO</code> puts ACK to sleep; while sleeping, DECK
+        mode shows <code>SLEEPING</code> instead of a deck name and the
+        button reads <code>WAKE SYS</code> in blue instead of red.
+      </p>
+    </div>
+  </section>
+
+  <section id="deck-options">
+    <p class="deck-eyebrow">Deck 04 // Options</p>
+
+    <div class="watch-frame">
+      <div class="watch-screen" role="img"
+           aria-label="Options overlay, full-screen, triggered by tapping the center of the dial. Header reads greater-than OPTIONS. Two buttons: NEURO in cyan, launches a fourth companion app; CYCLE BG in purple, steps the dial's background through grid, PCB, and starfield. Below, a FULL COLOR HOLD slider currently set to 25 seconds, adjustable in 5 second steps from 20 to 30, with a footnote reading SYSTEM MAY OVERRIDE.">
+        <div class="bg-grid-layer slow" aria-hidden="true"></div>
+
+        <svg class="dial-fg" id="optionsSvg" viewBox="0 0 320 320">
+          <circle cx="160" cy="160" r="154" fill="none" stroke="var(--border)" stroke-width="1"></circle>
+
+          <text x="160" y="98" text-anchor="middle" font-family="var(--font-mono)" font-weight="700" font-size="14" letter-spacing="2" fill="var(--green)">&gt; OPTIONS</text>
+
+          <path d="M 78 118 L 148 118 L 148 160 L 78 160 Z" fill="none" stroke="var(--cyan)" stroke-width="1.5"></path>
+          <circle cx="113" cy="132" r="3" fill="var(--cyan)"></circle>
+          <text x="113" y="150" text-anchor="middle" font-family="var(--font-mono)" font-weight="700" font-size="10" fill="var(--cyan)">NEURO</text>
+
+          <path d="M 172 118 L 242 118 L 242 160 L 172 160 Z" fill="none" stroke="var(--purple)" stroke-width="1.5"></path>
+          <circle cx="207" cy="132" r="3" fill="var(--purple)"></circle>
+          <text x="207" y="150" text-anchor="middle" font-family="var(--font-mono)" font-weight="700" font-size="9.5" fill="var(--purple)">CYCLE BG</text>
+
+          <text x="160" y="192" text-anchor="middle" font-family="var(--font-mono)" font-weight="700" font-size="9.5" letter-spacing="1" fill="var(--orange)">FULL COLOR HOLD</text>
+          <text id="holdValue" x="160" y="215" text-anchor="middle" font-family="var(--font-clock)" font-weight="700" font-size="19" fill="#fff"></text>
+
+          <line x1="90" y1="234" x2="230" y2="234" stroke="#333" stroke-width="3"></line>
+          <line id="holdFill" x1="90" y1="234" x2="160" y2="234" stroke="var(--orange)" stroke-width="3"></line>
+          <circle class="hold-dot" data-i="0" cx="90" cy="234" r="4" fill="var(--orange)"></circle>
+          <circle class="hold-dot" data-i="1" cx="160" cy="234" r="6" fill="#fff"></circle>
+          <circle class="hold-dot" data-i="2" cx="230" cy="234" r="4" fill="#3a3a3a"></circle>
+          <rect id="holdHit" x="75" y="219" width="170" height="30" fill="transparent" pointer-events="auto" style="cursor:pointer"></rect>
+
+          <text x="90" y="252" text-anchor="middle" font-family="var(--font-mono)" font-size="9" fill="var(--ink-dim)">5</text>
+          <text x="230" y="252" text-anchor="middle" font-family="var(--font-mono)" font-size="9" fill="var(--ink-dim)">30 SEC</text>
+
+          <text x="160" y="270" text-anchor="middle" font-family="var(--font-mono)" font-size="7.5" letter-spacing="0.5" fill="var(--ink-faint)">SYSTEM MAY OVERRIDE</text>
+        </svg>
+      </div>
+    </div>
+
+    <p class="watch-caption">
+      The slider is live — drag it or tap a point on the track.
+    </p>
+
+    <div class="deck-copy">
+      <h3>Two shortcuts</h3>
+      <p>
+        <strong>NEURO</strong> launches a fourth companion app
+        (<code>com.snakesan.cyberquake</code>) not otherwise surfaced on
+        the dial. <strong>CYCLE BG</strong> steps the background through
+        the same three modes shown in Deck 1 — grid, PCB, starfield — and
+        writes the choice to <code>SharedPreferences</code> under
+        <code>cached_bg_mode</code> so it survives a restart.
+      </p>
+
+      <h3>How long a tap keeps the screen on</h3>
+      <p>
+        <code>FULL COLOR HOLD</code> sets how long the display stays in
+        its full-color interactive state after you touch it, before
+        dropping back to ambient — three steps, 20 to 30 seconds in 5
+        second increments, set by dragging or tapping the track directly.
+      </p>
+      <div class="fact-note">
+        <strong>Label doesn't match the range:</strong> the track's own
+        left-edge label reads <code>5</code>, but the real minimum —
+        <code>MIN_COLOR_HOLD_SECONDS</code> in the source — is 20. Looks
+        like a leftover from an earlier version of the range that never
+        got updated. Reproduced here as-is, mismatch included.
+      </div>
+    </div>
+  </section>
+
+  <section id="deck-emergency">
+    <p class="deck-eyebrow">Deck 05 // Emergency Stop</p>
+
+    <div class="watch-frame">
+      <div class="watch-screen" id="emergencyScreen" data-mode="single"
+           role="img"
+           aria-label="Emergency Stop overlay, full-screen, red diagonal warning stripes. Header reads slash slash EMERGENCY STOP slash slash. Below, TERMINATE colon, then the target name. Two buttons: ABORT in gray, EXECUTE in red bold.">
+        <svg class="dial-fg" viewBox="0 0 320 320" aria-hidden="true">
+          <defs>
+            <pattern id="warningStripes" width="34" height="34" patternTransform="rotate(-20)" patternUnits="userSpaceOnUse">
+              <line x1="0" y1="0" x2="0" y2="34" stroke="var(--red)" stroke-width="16" stroke-opacity="0.1"></line>
+            </pattern>
+          </defs>
+          <circle cx="160" cy="160" r="154" fill="url(#warningStripes)" stroke="var(--border)" stroke-width="1"></circle>
+
+          <text x="160" y="122" text-anchor="middle" font-family="var(--font-mono)" font-weight="700" font-size="13" letter-spacing="1" fill="var(--red)">// EMERGENCY STOP //</text>
+          <text x="160" y="150" text-anchor="middle" font-family="var(--font-mono)" font-size="10" letter-spacing="1" fill="var(--ink-dim)">TERMINATE:</text>
+          <text id="emergencyTarget" x="160" y="176" text-anchor="middle" font-family="var(--font-clock)" font-weight="700" font-size="22" fill="#fff"></text>
+
+          <path d="M 83 205 L 153 205 L 153 245 L 83 245 Z" fill="none" stroke="var(--ink-dim)" stroke-width="1.5"></path>
+          <text x="118" y="229" text-anchor="middle" font-family="var(--font-mono)" font-weight="700" font-size="11" letter-spacing="1" fill="var(--ink-dim)">ABORT</text>
+
+          <path d="M 167 205 L 237 205 L 237 245 L 167 245 Z" fill="none" stroke="var(--red)" stroke-width="1.5"></path>
+          <text x="202" y="229" text-anchor="middle" font-family="var(--font-mono)" font-weight="700" font-size="11" letter-spacing="1" fill="var(--red)">EXECUTE</text>
+        </svg>
+      </div>
+    </div>
+
+    <div class="mode-row">
+      <button type="button" class="mode-btn" id="btnEmergSingle" aria-pressed="true">SINGLE APP</button>
+      <button type="button" class="mode-btn" id="btnEmergAll" aria-pressed="false">KILL ALL</button>
+    </div>
+    <p class="watch-caption">
+      Reached from a long-press — center for everything, a zone for one app. See Deck 2.
+    </p>
+
+    <div class="deck-copy">
+      <h3>The only overlay that won't let you tap past it</h3>
+      <p>
+        Every other overlay on this page dismisses if you tap outside its
+        content — Options included. This one doesn't: the background is a
+        no-op click absorber, so the only way out is <code>ABORT</code> or
+        <code>EXECUTE</code>. It's the one interaction on the whole face
+        that requires an explicit choice.
+      </p>
+
+      <h3>What EXECUTE actually does</h3>
+      <p>
+        Sends <code>ACTION_KILL_SERVICE</code> as a broadcast — targeted at
+        one package, or with no package set at all for <code>ALL</code> —
+        then flips the matching offline flag (or all three) on the dial
+        state. That's what turns an arc dark gray and adds the
+        <code>OFFLINE</code> label back in Deck 1, immediately, no
+        confirmation round-trip needed.
+      </p>
+
+      <div class="fact-note">
+        <strong>The label isn't uniform:</strong> killing everything shows
+        the deliberately-written <code>SYSTEM</code>. Killing one app shows
+        whatever <code>target.substringAfterLast('.')</code> returns —
+        for VITALITY.SYS that's the raw, lowercase <code>vitalitysys</code>,
+        not a clean display name. Reproduced here exactly as it renders.
+      </div>
+    </div>
+  </section>
+
+  <section id="deck-ambient">
+    <p class="deck-eyebrow">Deck 06 // Ambient Mode</p>
+
+    <div class="watch-frame">
+      <div class="watch-screen" id="ambientScreen" data-mode="active"
+           role="img"
+           aria-label="The same dial as Deck 1, shown in both active and ambient mode. Active mode is full color with a drifting grid background. Ambient mode drops the background to flat black, thins every arc, collapses the three inner gauges into one plain gray circle, and renders the clock as outline-only digits with no seconds shown.">
+        <div class="bg-grid-layer slow" id="ambGridSlow" aria-hidden="true"></div>
+        <div class="bg-grid-layer fast" id="ambGridFast" aria-hidden="true"></div>
+
+        <svg class="dial-fg" viewBox="0 0 320 320" aria-hidden="true">
+          <circle cx="160" cy="160" r="154" fill="none" stroke="var(--border)" stroke-width="1"></circle>
+
+          <path id="amb-track-hp" fill="none" stroke-width="20"></path>
+          <path id="amb-arc-hp" fill="none" stroke-width="20" stroke-linecap="butt"></path>
+          <path id="amb-arc-ack" fill="none" stroke-width="20" stroke-linecap="butt"></path>
+          <path id="amb-arc-flux" fill="none" stroke-width="20" stroke-linecap="butt"></path>
+
+          <g id="ambGaugeGroup">
+            <path id="amb-gtrack-ram" fill="none" stroke="#333" stroke-width="5"></path>
+            <path id="amb-gtrack-bat" fill="none" stroke="#333" stroke-width="5"></path>
+            <path id="amb-gtrack-pwr" fill="none" stroke="#333" stroke-width="5"></path>
+            <path id="amb-gauge-ram" fill="none" stroke="var(--red)" stroke-width="5"></path>
+            <path id="amb-gauge-bat" fill="none" stroke="var(--green)" stroke-width="5"></path>
+            <path id="amb-gauge-pwr" fill="none" stroke="var(--green)" stroke-width="5"></path>
+          </g>
+          <circle id="ambGaugeCircle" cx="160" cy="160" r="78" fill="none" stroke="var(--ink-dim)" stroke-width="2" style="display:none"></circle>
+
+          <defs>
+            <path id="amb-tp-topright"></path>
+            <path id="amb-tp-bottom"></path>
+            <path id="amb-tp-left"></path>
+          </defs>
+          <text class="bezel-text" id="ambTextTopright"><textPath href="#amb-tp-topright" startOffset="2"></textPath></text>
+          <text class="bezel-text" id="ambTextBottom"><textPath href="#amb-tp-bottom" startOffset="50%" text-anchor="middle"></textPath></text>
+          <text class="bezel-text" id="ambTextLeft"><textPath href="#amb-tp-left" startOffset="2"></textPath></text>
+
+          <text id="ambClockTime" x="160" y="168" text-anchor="middle" font-family="var(--font-clock)" font-weight="800" font-size="42"></text>
+          <text id="ambClockSecs" x="160" y="195" text-anchor="middle" font-family="var(--font-clock)" font-weight="700" font-size="17" fill="var(--cyan)" fill-opacity="0.55"></text>
+        </svg>
+      </div>
+    </div>
+
+    <div class="mode-row">
+      <button type="button" class="mode-btn" id="btnAmbActive" aria-pressed="true">ACTIVE</button>
+      <button type="button" class="mode-btn" id="btnAmbAmbient" aria-pressed="false">AMBIENT</button>
+    </div>
+    <p class="watch-caption">
+      Same telemetry as Deck 1, both render states. The jitter in ambient is sped up here — the real device rescales roughly once a minute.
+    </p>
+
+    <div class="deck-copy">
+      <h3>A different watch face, not a dimmed one</h3>
+      <p>
+        Ambient isn't the active dial with the brightness turned down —
+        almost everything renders differently. Stroke width drops from
+        18dp to 4dp. The grid, PCB, and starfield backgrounds all stop
+        rendering — ambient is always flat black. The three RAM/battery/power
+        gauges disappear entirely, replaced by one plain gray outline
+        circle. Every color collapses to a single gray, including the
+        telemetry arcs' own state colors.
+      </p>
+
+      <h3>The clock stops being solid</h3>
+      <p>
+        Active mode fills the time in solid color. Ambient renders it as
+        an <strong>outline only</strong> — a 2dp stroke with no fill — and
+        drops the seconds readout completely. Both are standard OLED
+        burn-in mitigations: less lit pixel area, and a value that doesn't
+        need to repaint every second.
+      </p>
+
+      <h3>The jitter</h3>
+      <p>
+        On every ambient update — about once a minute, driven by the
+        system, not the app — the whole face gets rescaled to a random
+        85–100%. Small enough not to read as motion, large enough that no
+        pixel stays lit at exactly the same brightness for hours at a time.
+      </p>
+
+      <div class="fact-note">
+        <strong>One thing stays white:</strong> an <code>OFFLINE</code>
+        label is hardcoded to plain white in ambient mode while everything
+        around it goes gray — the one deliberate exception to the
+        blackout, so a real problem stays legible even in the dimmest state.
+      </div>
+    </div>
+  </section>
+
+  <section id="deck-config">
+    <p class="deck-eyebrow">Deck 07 // The Phone App</p>
+
+    <div class="phone-frame">
+      <div class="phone-notch" aria-hidden="true"></div>
+      <div class="phone-screen"
+           role="img"
+           aria-label="OVERSEER Mobile configuration screen. Title reads OVERSEER slash slash WEDGE CONFIG. A ring preview shows three arcs, matching the watch: green for Wedge 1 (VITALITY), cyan for Wedge 2 (ACK), pink for Wedge 3 (FLUX). Below, three tappable wedge cards, one per wedge, each showing its position, whether it's a built-in function or an app shortcut, and its current assignment. A last-synced timestamp, and a PUSH TO WATCH button.">
+        <div class="cfg-title">OVERSEER // WEDGE CONFIG</div>
+
+        <svg class="cfg-ring" viewBox="0 0 220 220" aria-hidden="true">
+          <circle cx="110" cy="110" r="88" fill="none" stroke="var(--border)" stroke-width="1"></circle>
+          <path id="cfgRingVitality" fill="none" stroke="var(--green)" stroke-width="20"></path>
+          <path id="cfgRingAck" fill="none" stroke="var(--cyan)" stroke-width="20"></path>
+          <path id="cfgRingFlux" fill="none" stroke="var(--pink)" stroke-width="20"></path>
+        </svg>
+
+        <div class="cfg-wedge-list">
+          <div class="wedge-card" style="--accent:var(--green)">
+            <div class="wedge-color-marker"></div>
+            <div class="wedge-card-text">
+              <div class="wedge-card-pos">WEDGE 1</div>
+              <div class="wedge-card-kind">BUILT-IN FUNCTION</div>
+              <div class="wedge-card-label">VITALITY</div>
+            </div>
+            <div class="wedge-card-edit">EDIT</div>
+          </div>
+          <div class="wedge-card" style="--accent:var(--cyan)">
+            <div class="wedge-color-marker"></div>
+            <div class="wedge-card-text">
+              <div class="wedge-card-pos">WEDGE 2</div>
+              <div class="wedge-card-kind">BUILT-IN FUNCTION</div>
+              <div class="wedge-card-label">ACK</div>
+            </div>
+            <div class="wedge-card-edit">EDIT</div>
+          </div>
+          <div class="wedge-card" style="--accent:var(--pink)">
+            <div class="wedge-color-marker"></div>
+            <div class="wedge-card-text">
+              <div class="wedge-card-pos">WEDGE 3</div>
+              <div class="wedge-card-kind">BUILT-IN FUNCTION</div>
+              <div class="wedge-card-label">FLUX</div>
+            </div>
+            <div class="wedge-card-edit">EDIT</div>
+          </div>
+        </div>
+
+        <div class="cfg-last-synced" id="cfgLastSynced"></div>
+        <button type="button" class="cfg-push-btn" id="cfgPushBtn">PUSH TO WATCH</button>
+
+        <div class="cfg-modal-backdrop" id="cfgModalBackdrop">
+          <div class="cfg-modal">
+            <h4>Push to watch?</h4>
+            <p>This replaces the wedge configuration currently on your watch with what's shown here.</p>
+            <div class="cfg-modal-actions">
+              <button type="button" id="cfgCancelBtn">CANCEL</button>
+              <button type="button" id="cfgConfirmBtn">PUSH</button>
+            </div>
+          </div>
+        </div>
+        <div class="cfg-toast" id="cfgToast">SYNCED TO WATCH</div>
+      </div>
+    </div>
+
+    <p class="watch-caption">
+      Tap PUSH TO WATCH — the confirm dialog is real, word for word.
+    </p>
+
+    <div class="deck-copy">
+      <h3>A preview that actually matches</h3>
+      <p>
+        The ring here isn't a generic 3-way split — it's drawn with the
+        exact same start angles as the watch face's own arcs (-87°, 33°,
+        153°), pulled from the same source both sides share. Reassign a
+        wedge and this preview redraws immediately; the watch doesn't hear
+        about it until you push.
+      </p>
+
+      <h3>Nothing is live until you say so</h3>
+      <p>
+        Every edit here — a function moved to a different wedge, a
+        shortcut's label or color — only changes the phone's local config.
+        The watch keeps running whatever it was last pushed, even if it
+        now disagrees with what's on screen here. <code>PUSH TO WATCH</code>
+        is the only action that changes what you see on your wrist, and it
+        always asks first.
+      </p>
+    </div>
+  </section>
+
+  <section id="deck-editor">
+    <p class="deck-eyebrow">Deck 08 // Wedge Editor</p>
+
+    <div class="phone-frame">
+      <div class="phone-notch" aria-hidden="true"></div>
+      <div class="phone-screen"
+           role="img"
+           aria-label="Wedge editor dialog for Wedge 2, currently ACK. A FUNCTION slash SHORTCUT mode toggle. In FUNCTION mode, three rows: VITALITY, currently on Wedge 1; ACK, selected; FLUX, currently on Wedge 3. In SHORTCUT mode, a CHOOSE APP button, a label field, and eight named color swatches. CANCEL and SAVE buttons at the bottom; saving a function that's occupied elsewhere asks to confirm the swap first.">
+        <div class="editor-card">
+          <div class="editor-title">EDIT WEDGE 2</div>
+
+          <div class="editor-tabs">
+            <button type="button" class="editor-tab" id="editorTabFunction" aria-pressed="true">FUNCTION</button>
+            <button type="button" class="editor-tab" id="editorTabShortcut" aria-pressed="false">SHORTCUT</button>
+          </div>
+
+          <div id="editorFunctionPane">
+            <p class="editor-desc">Preserves this app's built-in display for that function. Only one wedge can run each function at a time.</p>
+
+            <div class="func-row" id="funcRowVitality" style="--fn-color:var(--green)" aria-pressed="false">
+              <div class="func-icon"></div>
+              <div class="func-text">
+                <div class="func-label">VITALITY</div>
+                <div class="func-occupied">Currently on Wedge 1 — saving will move it here</div>
+              </div>
+            </div>
+            <div class="func-row" id="funcRowAck" style="--fn-color:var(--cyan)" aria-pressed="true">
+              <div class="func-icon"></div>
+              <div class="func-text"><div class="func-label">ACK</div></div>
+            </div>
+            <div class="func-row" id="funcRowFlux" style="--fn-color:var(--pink)" aria-pressed="false">
+              <div class="func-icon"></div>
+              <div class="func-text">
+                <div class="func-label">FLUX</div>
+                <div class="func-occupied">Currently on Wedge 3 — saving will move it here</div>
+              </div>
+            </div>
+          </div>
+
+          <div id="editorShortcutPane" style="display:none">
+            <p class="editor-desc">Launches any app you choose, in a color you pick.</p>
+
+            <div style="position:relative">
+              <button type="button" class="shortcut-choose-btn" id="shortcutChooseBtn">
+                <span id="shortcutChooseLabel">CHOOSE APP</span>
+              </button>
+              <div class="app-picker-mini" id="appPickerMini" style="display:none">
+                <div class="app-picker-row" data-app="Camera"><div class="app-picker-icon"></div>Camera</div>
+                <div class="app-picker-row" data-app="Messages"><div class="app-picker-icon"></div>Messages</div>
+                <div class="app-picker-row" data-app="Maps"><div class="app-picker-icon"></div>Maps</div>
+              </div>
+            </div>
+            <input type="text" class="shortcut-label-field" id="shortcutLabelField" placeholder="Label shown on the watch">
+
+            <div class="swatch-section-label">WEDGE COLOR</div>
+            <div class="swatch-row" id="swatchRow"></div>
+          </div>
+
+          <div class="editor-actions">
+            <button type="button" class="btn-cancel">CANCEL</button>
+            <button type="button" class="btn-save" id="editorSaveBtn">SAVE</button>
+          </div>
+        </div>
+
+        <div class="cfg-modal-backdrop" id="editorModalBackdrop">
+          <div class="cfg-modal">
+            <h4 id="editorModalTitle">Move VITALITY?</h4>
+            <p id="editorModalBody"></p>
+            <div class="cfg-modal-actions">
+              <button type="button" id="editorModalCancel">CANCEL</button>
+              <button type="button" id="editorModalSwap">SWAP</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <p class="watch-caption">
+      Live — switch tabs, pick a function, or try SAVE on an occupied one.
+    </p>
+
+    <div class="deck-copy">
+      <h3>Two ways to fill a wedge</h3>
+      <p>
+        <strong>FUNCTION</strong> mode assigns one of the three built-ins and
+        keeps its live telemetry — this is the mode every wedge starts in.
+        <strong>SHORTCUT</strong> mode gives up live data for a plain app
+        launcher, with its own label and a color pulled from a fixed set of
+        eight named neon presets, not a continuous picker — easier to land
+        on exactly, and every option is already legible against the dark
+        theme.
+      </p>
+
+      <h3>Nothing is empty by accident</h3>
+      <p>
+        Since a function can only live in one wedge, picking one that's
+        already placed elsewhere doesn't just fail or leave a gap — saving
+        <em>swaps</em> it, handing your other wedge whatever this one was
+        just holding. Try selecting VITALITY or FLUX above, then SAVE.
+      </p>
+    </div>
+  </section>
+
+  <section id="modules">
+    <p class="eyebrow">Status at a glance</p>
+    <h2>For every slice, a purpose</h2>
+    <p class="section-lede">
+      Interactions are routine across apps. Tap to interact or open the app,
+      long press to kill the linked app. ACK offers additional functionality
+      with an additional tap and hold interaction when the deck selector is
+      opened.
+    </p>
+
+    <div class="modules">
+      <div class="module" style="--edge:var(--green)">
+        <div class="module-inner">
+          <div>
+            <div class="module-head">
+              <span class="module-name" style="--accent:var(--green)">VITALITY.SYS</span>
+              <span class="module-pkg">com.snakesan.vitalitysys</span>
+              <a class="module-repo-link" style="--accent:var(--green)" href="https://github.com/ASPDesignLabs/VITALITYSYS" target="_blank" rel="noopener">Source →</a>
+            </div>
+            <p class="module-desc">
+              VITALITY.sys is a lifestyle management app that assists with
+              some common blind spots and difficulties. Keep track of
+              medication use, eating and drinking, and hygiene. Uses game
+              mechanics to simulate hit points. Hit points can be lost if a
+              goal is allowed to be missed, with greater impact as the issue
+              remains unresolved. Restore hit points by responding to the
+              alerted status — eat a meal if missed to restore lost HP.
+            </p>
+            <div class="chips">
+              <span class="chip" style="--accent:var(--green)">HP 95</span>
+              <span class="chip" style="--accent:var(--green)">H2O · LOW / NOM / HI</span>
+              <span class="chip" style="--accent:var(--green)">PREP MEAL / REQ MEAL</span>
+            </div>
+          </div>
+          <div class="module-gesture">
+            <div class="gesture-row"><span>TAP</span><b>open app</b></div>
+            <div class="gesture-row"><span>HOLD</span><b>kill process</b></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="module" style="--edge:var(--cyan)">
+        <div class="module-inner">
+          <div>
+            <div class="module-head">
+              <span class="module-name" style="--accent:var(--cyan)">ACK</span>
+              <span class="module-pkg">com.example.besu</span>
+              <a class="module-repo-link" style="--accent:var(--cyan)" href="https://github.com/ASPDesignLabs/ACK" target="_blank" rel="noopener">Source →</a>
+            </div>
+            <p class="module-desc">
+              A type of hybrid AAC featuring rapidly composable statements,
+              novel contextual organization, and a custom state machine that
+              binds watch movement to user-configured replies and prompts.
+              Three gestures with up to four responses per gesture, offering
+              audio playback on the phone or a connected Bluetooth speaker
+              and a visual prompt on the phone. With OVERSEER you can change
+              the active deck, profile, and view live state information as
+              you issue a command with a gesture.
+            </p>
+            <div class="chips">
+              <span class="chip" style="--accent:var(--cyan)">DECK NAME</span>
+              <span class="chip" style="--accent:var(--cyan)">&gt;&gt; TARGET</span>
+              <span class="chip" style="--accent:var(--cyan)">LIVE STATE MACHINE</span>
+            </div>
+          </div>
+          <div class="module-gesture">
+            <div class="gesture-row"><span>TAP</span><b>open deck picker</b></div>
+            <div class="gesture-row"><span>HOLD</span><b>kill process</b></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="module" style="--edge:var(--orange)">
+        <div class="module-inner">
+          <div>
+            <div class="module-head">
+              <span class="module-name" style="--accent:var(--orange)">NEONFLUX</span>
+              <span class="module-pkg">com.snakesan.neonflux</span>
+              <a class="module-repo-link" style="--accent:var(--orange)" href="https://github.com/ASPDesignLabs/NEONFLUX" target="_blank" rel="noopener">Source →</a>
+            </div>
+            <p class="module-desc">
+              An experience that uses haptics to offer grounding support.
+              Can be used to initiate a set pattern or configured to respond
+              to movement. View the selected haptic profile, BPM, intensity,
+              and sleep protocol status from within OVERSEER.
+            </p>
+            <div class="chips">
+              <span class="chip" style="--accent:var(--orange)">PULSE / GEIGER / THROB</span>
+              <span class="chip" style="--accent:var(--orange)">95 BPM · 100%</span>
+              <span class="chip" style="--accent:var(--orange)">SLP PROTOCOL</span>
+            </div>
+          </div>
+          <div class="module-gesture">
+            <div class="gesture-row"><span>TAP</span><b>open NEONFLUX</b></div>
+            <div class="gesture-row"><span>HOLD</span><b>kill process</b></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="meta">
+      <div>OVERSEER · com.snakesan.overseer · v1.0</div>
+      <div>Wear OS 4/5/6 · built and worn daily</div>
+    </div>
+    <a class="btn btn-ghost" href="https://github.com/ASPDesignLabs/OVERSEER">github.com/ASPDesignLabs/OVERSEER</a>
+  </footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  function polar(cx,cy,r,deg){
+    var a=(deg)*Math.PI/180;
+    return { x:cx+r*Math.cos(a), y:cy+r*Math.sin(a) };
+  }
+  // Color arcs / gauges: always sweep clockwise (matches Compose drawArc's
+  // positive-sweep convention — startAngle to startAngle+sweepAngle).
+  function arcPath(cx,cy,r,startDeg,endDeg){
+    var s=polar(cx,cy,r,startDeg), e=polar(cx,cy,r,endDeg);
+    var large = Math.abs(endDeg-startDeg) <= 180 ? 0 : 1;
+    return "M "+s.x+" "+s.y+" A "+r+" "+r+" 0 "+large+" 1 "+e.x+" "+e.y;
+  }
+  // Bezel text always winds the same way — outward-facing, clockwise —
+  // regardless of where it sits on the ring. That's a deliberate match to
+  // the real watch: the ACK label at the bottom doesn't get corrected
+  // upright, it renders inverted, same as every other curvedText call.
+  function bezelTextPath(cx,cy,r,centerDeg,halfSpan){
+    return arcPath(cx,cy,r,centerDeg-halfSpan,centerDeg+halfSpan);
+  }
+
+  var cx=160, cy=160;
+
+  // Outer ring rides right against the bezel and runs thick — Compose's
+  // drawArc here takes no explicit topLeft/size, so it defaults to the
+  // full canvas as its bounding box. HP is the only meter (65%); ACK and
+  // FLUX are always full length, color/opacity carrying their state.
+  var RING_R = 132;
+  document.getElementById("glow-hp").setAttribute("d", arcPath(cx,cy,RING_R,-87,27));
+  document.getElementById("track-hp").setAttribute("d", arcPath(cx,cy,RING_R,-87,27));
+  document.getElementById("arc-hp").setAttribute("d", arcPath(cx,cy,RING_R,-87,-87+114*0.65));
+  document.getElementById("arc-ack").setAttribute("d", arcPath(cx,cy,RING_R,33,147));
+  document.getElementById("arc-flux").setAttribute("d", arcPath(cx,cy,RING_R,153,267));
+
+  // Inner gauge ring: bumped up so the clock sits inside it instead of
+  // spilling past its edge.
+  var GAUGE_R = 78;
+  var gauges = [
+    { track:"gtrack-ram", arc:"gauge-ram", start:230, frac:0.55 },
+    { track:"gtrack-bat", arc:"gauge-bat", start:350, frac:0.7 },
+    { track:"gtrack-pwr", arc:"gauge-pwr", start:110, frac:0.3 }
+  ];
+  gauges.forEach(function(g){
+    document.getElementById(g.track).setAttribute("d", arcPath(cx,cy,GAUGE_R,g.start,g.start+80));
+    document.getElementById(g.arc).setAttribute("d", arcPath(cx,cy,GAUGE_R,g.start,g.start+80*g.frac));
+  });
+
+  // Bezel text sits inside the ring's inner edge, not beyond it toward the
+  // casing — matches the real watch photo. Bigger now that the ring itself
+  // is thinner, so there's more room to grow into.
+  var TEXT_R = RING_R - 24;
+  document.getElementById("tp-topright").setAttribute("d", bezelTextPath(cx,cy,TEXT_R,330,60));
+  document.getElementById("tp-bottom").setAttribute("d", bezelTextPath(cx,cy,TEXT_R,90,40));
+  document.getElementById("tp-left").setAttribute("d", bezelTextPath(cx,cy,TEXT_R,210,72));
+
+  function tick(){
+    var now = new Date();
+    var hh = String(now.getHours()).padStart(2,"0");
+    var mm = String(now.getMinutes()).padStart(2,"0");
+    var ss = String(now.getSeconds()).padStart(2,"0");
+    document.getElementById("clockTime").textContent = hh+":"+mm;
+    document.getElementById("clockSecs").textContent = ss;
+  }
+  tick();
+  setInterval(tick, 1000);
+
+  // PCB traces — hand-placed jagged circuit paths, one solid color per trace
+  // drawn from the app's real palette, flowing via an animated dash offset
+  // (the same technique MainGrid.kt uses: PathEffect.dashPathEffect + phase).
+  var traceDefs = [
+    { d:"M110,90 L110,130 L150,130 L150,170 L190,170 L190,210", color:"var(--cyan)", dur:4.2 },
+    { d:"M230,80 L200,80 L200,110 L170,110 L170,90", color:"var(--red)", dur:5.6 },
+    { d:"M90,210 L120,210 L120,180 L160,180 L160,220 L190,220", color:"var(--green)", dur:3.6 },
+    { d:"M235,170 L235,205 L200,205 L200,235", color:"var(--orange)", dur:4.9 },
+    { d:"M175,75 L175,105 L205,105 L205,140", color:"var(--gold)", dur:6.4 },
+    { d:"M100,150 L130,150 L130,180 L100,180", color:"var(--purple)", dur:5.1 },
+    { d:"M225,145 L195,145 L195,175 L225,175 L225,200", color:"var(--pink)", dur:3.9 }
+  ];
+  var traceGroup = document.getElementById("pcbTraces");
+  traceDefs.forEach(function(t, i){
+    var p = document.createElementNS("http://www.w3.org/2000/svg","path");
+    p.setAttribute("d", t.d);
+    p.setAttribute("stroke", t.color);
+    p.setAttribute("class","pcb-trace");
+    p.style.animationDuration = t.dur + "s";
+    p.style.animationDelay = (i * 0.4) + "s";
+    traceGroup.appendChild(p);
+    ["M","L"].length; // no-op, keeps parser calm on some minifiers
+    var pts = t.d.match(/-?\d+(\.\d+)?/g);
+    for (var j=0;j<pts.length;j+=2){
+      var node = document.createElementNS("http://www.w3.org/2000/svg","circle");
+      node.setAttribute("cx", pts[j]);
+      node.setAttribute("cy", pts[j+1]);
+      node.setAttribute("r", 3);
+      node.setAttribute("fill", t.color);
+      node.setAttribute("class","pcb-node");
+      traceGroup.appendChild(node);
+    }
+  });
+
+  var screenEl = document.getElementById("watchScreen");
+  var btnGrid = document.getElementById("btnGrid");
+  var btnPcb = document.getElementById("btnPcb");
+  function setMode(mode){
+    screenEl.setAttribute("data-bgmode", mode);
+    btnGrid.setAttribute("aria-pressed", String(mode === "grid"));
+    btnPcb.setAttribute("aria-pressed", String(mode === "pcb"));
+    var label = screenEl.getAttribute("aria-label").replace(/(grid|PCB) background/, (mode === "grid" ? "grid" : "PCB") + " background");
+    screenEl.setAttribute("aria-label", label);
+  }
+  btnGrid.addEventListener("click", function(){ setMode("grid"); });
+  btnPcb.addEventListener("click", function(){ setMode("pcb"); });
+
+  // ---- Deck 2: Zones ----
+  function sectorPath(cx,cy,r,startDeg,endDeg){
+    var s=polar(cx,cy,r,startDeg), e=polar(cx,cy,r,endDeg);
+    var large = Math.abs(endDeg-startDeg) <= 180 ? 0 : 1;
+    return "M "+cx+" "+cy+" L "+s.x+" "+s.y+" A "+r+" "+r+" 0 "+large+" 1 "+e.x+" "+e.y+" Z";
+  }
+  var ZONE_R = 148;
+  document.getElementById("zone-vitality").setAttribute("d", sectorPath(cx,cy,ZONE_R,270,390));
+  document.getElementById("zone-ack").setAttribute("d", sectorPath(cx,cy,ZONE_R,30,150));
+  document.getElementById("zone-flux").setAttribute("d", sectorPath(cx,cy,ZONE_R,150,270));
+
+  var boundaryHtml = "";
+  [30,150,270].forEach(function(deg){
+    var p = polar(cx,cy,ZONE_R,deg);
+    boundaryHtml += '<line x1="'+cx+'" y1="'+cy+'" x2="'+p.x+'" y2="'+p.y+'"></line>';
+  });
+  var zb = document.getElementById("zoneBoundaries");
+  if (zb) zb.innerHTML = boundaryHtml;
+
+  var tapCircleEl = document.getElementById("tapCircle");
+  var holdCircleEl = document.getElementById("holdCircle");
+  if (tapCircleEl) tapCircleEl.setAttribute("r", ZONE_R * 0.35);
+  if (holdCircleEl) holdCircleEl.setAttribute("r", ZONE_R * 0.25);
+
+  // Anchored at a fixed radius, then stacked in plain screen-down order
+  // (not toward-center order) so every label reads top-to-bottom correctly
+  // regardless of which side of the ring it's on.
+  function placeZoneLabel(id, angleDeg, lines){
+    var el = document.getElementById(id);
+    if (!el) return;
+    var anchor = polar(cx,cy,98,angleDeg);
+    var lineH = 15, startY = anchor.y - (lineH*(lines.length-1))/2;
+    var html = "";
+    lines.forEach(function(line, i){
+      html += '<tspan x="'+anchor.x+'" y="'+(startY+i*lineH)+'" font-size="'+(i===0?13:10)+'" fill-opacity="'+(i===0?1:0.8)+'">'+line+'</tspan>';
+    });
+    el.innerHTML = html;
+  }
+  placeZoneLabel("lbl-vitality", 330, ["VITALITY","TAP → launch","HOLD → kill"]);
+  placeZoneLabel("lbl-ack", 90, ["ACK","TAP → control overlay","HOLD → kill"]);
+  placeZoneLabel("lbl-flux", 210, ["NEONFLUX","TAP → launch","HOLD → kill"]);
+
+  // ---- Deck 3: ACK Control ----
+  function chamferPath(x,y,w,h,c){
+    return "M "+(x+c)+" "+y+
+      " L "+(x+w)+" "+y+
+      " L "+(x+w)+" "+(y+h-c)+
+      " L "+(x+w-c)+" "+(y+h)+
+      " L "+x+" "+(y+h)+
+      " L "+x+" "+(y+c)+" Z";
+  }
+
+  var ackDash1 = document.getElementById("ackDash1");
+  var ackDash2 = document.getElementById("ackDash2");
+  if (ackDash1 && ackDash2){
+    ackDash1.setAttribute("x", 96); ackDash1.setAttribute("y", 90);
+    ackDash2.setAttribute("x", 215); ackDash2.setAttribute("y", 90);
+  }
+  var deckBoxEl = document.getElementById("ackDeckBox");
+  if (deckBoxEl) deckBoxEl.setAttribute("d", chamferPath(108,148,104,42,10));
+  var cryoBoxEl = document.getElementById("ackCryoBox");
+  if (cryoBoxEl) cryoBoxEl.setAttribute("d", chamferPath(103,251,114,34,8));
+
+  var ackScreenEl = document.getElementById("ackScreen");
+  var btnAckDeck = document.getElementById("btnAckDeck");
+  var btnAckTarget = document.getElementById("btnAckTarget");
+  function setAckMode(mode){
+    if (!ackScreenEl) return;
+    ackScreenEl.setAttribute("data-mode", mode);
+    var isDeck = mode === "deck";
+    var accent = isDeck ? "var(--purple)" : "var(--green)";
+    document.getElementById("ackModeLabel").textContent = isDeck ? "DECK // CONTROL" : "TARGET // LINK";
+    document.getElementById("ackModeLabel").setAttribute("fill", accent);
+    ackDash1.setAttribute("fill", isDeck ? "var(--purple)" : "#3a3a3a");
+    ackDash2.setAttribute("fill", isDeck ? "#3a3a3a" : "var(--green)");
+    deckBoxEl.setAttribute("stroke", "var(--purple)");
+    deckBoxEl.setAttribute("stroke-opacity", isDeck ? "0.6" : "0");
+    document.getElementById("ackDeckName").setAttribute("fill", "var(--purple)");
+    document.getElementById("ackDeckContent").style.display = isDeck ? "" : "none";
+    document.getElementById("ackTargetContent").style.display = isDeck ? "none" : "";
+    document.getElementById("ackScreen").style.setProperty("--ack-tint", accent);
+    btnAckDeck.setAttribute("aria-pressed", String(isDeck));
+    btnAckTarget.setAttribute("aria-pressed", String(!isDeck));
+  }
+  document.getElementById("ackDeckName").textContent = "HOME";
+  document.getElementById("ackTargetName").textContent = "GO BACK";
+  setAckMode("deck");
+  if (btnAckDeck) btnAckDeck.addEventListener("click", function(){ setAckMode("deck"); });
+  if (btnAckTarget) btnAckTarget.addEventListener("click", function(){ setAckMode("target"); });
+
+  // ---- Deck 4: Options ----
+  var holdSteps = [20, 25, 30];
+  var holdIndex = 1;
+  var holdTrackX0 = 90, holdTrackX1 = 230;
+  var holdDots = Array.prototype.slice.call(document.querySelectorAll(".hold-dot"));
+  var holdFillEl = document.getElementById("holdFill");
+  var holdValueEl = document.getElementById("holdValue");
+
+  function updateHoldUI(){
+    var frac = holdIndex / (holdSteps.length - 1);
+    var x = holdTrackX0 + frac * (holdTrackX1 - holdTrackX0);
+    if (holdFillEl) holdFillEl.setAttribute("x2", x);
+    if (holdValueEl) holdValueEl.textContent = holdSteps[holdIndex] + " SEC";
+    holdDots.forEach(function(d){
+      var i = Number(d.getAttribute("data-i"));
+      d.setAttribute("cx", holdTrackX0 + (i/(holdSteps.length-1)) * (holdTrackX1-holdTrackX0));
+      if (i === holdIndex) { d.setAttribute("r", 6); d.setAttribute("fill", "#fff"); }
+      else if (i < holdIndex) { d.setAttribute("r", 4); d.setAttribute("fill", "var(--orange)"); }
+      else { d.setAttribute("r", 4); d.setAttribute("fill", "#3a3a3a"); }
+    });
+  }
+
+  var holdHitEl = document.getElementById("holdHit");
+  var optionsSvgEl = document.getElementById("optionsSvg");
+  if (holdHitEl && optionsSvgEl){
+    var dragging = false;
+    function setFromClientX(clientX){
+      var rect = optionsSvgEl.getBoundingClientRect();
+      var scale = 320 / rect.width;
+      var localX = (clientX - rect.left) * scale;
+      var frac = (localX - holdTrackX0) / (holdTrackX1 - holdTrackX0);
+      frac = Math.max(0, Math.min(1, frac));
+      var idx = Math.round(frac * (holdSteps.length - 1));
+      if (idx !== holdIndex){ holdIndex = idx; updateHoldUI(); }
+    }
+    holdHitEl.addEventListener("pointerdown", function(e){
+      dragging = true;
+      holdHitEl.setPointerCapture(e.pointerId);
+      setFromClientX(e.clientX);
+    });
+    holdHitEl.addEventListener("pointermove", function(e){
+      if (dragging) setFromClientX(e.clientX);
+    });
+    ["pointerup","pointercancel"].forEach(function(evt){
+      holdHitEl.addEventListener(evt, function(){ dragging = false; });
+    });
+  }
+  updateHoldUI();
+
+  // ---- Deck 5: Emergency Stop ----
+  var btnEmergSingle = document.getElementById("btnEmergSingle");
+  var btnEmergAll = document.getElementById("btnEmergAll");
+  var emergencyTargetEl = document.getElementById("emergencyTarget");
+  var emergencyScreenEl = document.getElementById("emergencyScreen");
+  function setEmergencyMode(mode){
+    if (!emergencyScreenEl) return;
+    emergencyScreenEl.setAttribute("data-mode", mode);
+    emergencyTargetEl.textContent = mode === "all" ? "SYSTEM" : "vitalitysys";
+    if (btnEmergSingle) btnEmergSingle.setAttribute("aria-pressed", String(mode !== "all"));
+    if (btnEmergAll) btnEmergAll.setAttribute("aria-pressed", String(mode === "all"));
+  }
+  setEmergencyMode("single");
+  if (btnEmergSingle) btnEmergSingle.addEventListener("click", function(){ setEmergencyMode("single"); });
+  if (btnEmergAll) btnEmergAll.addEventListener("click", function(){ setEmergencyMode("all"); });
+
+  // ---- Deck 6: Ambient Mode ----
+  // Same geometry constants as Deck 1 (RING_R/TEXT_R/GAUGE_R), same demo
+  // telemetry, so this reads as literally the same watch, two states.
+  document.getElementById("amb-track-hp").setAttribute("d", arcPath(cx,cy,RING_R,-87,27));
+  document.getElementById("amb-arc-hp").setAttribute("d", arcPath(cx,cy,RING_R,-87,-87+114*0.65));
+  document.getElementById("amb-arc-ack").setAttribute("d", arcPath(cx,cy,RING_R,33,147));
+  document.getElementById("amb-arc-flux").setAttribute("d", arcPath(cx,cy,RING_R,153,267));
+  gauges.forEach(function(g){
+    document.getElementById("amb-"+g.track).setAttribute("d", arcPath(cx,cy,GAUGE_R,g.start,g.start+80));
+    document.getElementById("amb-"+g.arc).setAttribute("d", arcPath(cx,cy,GAUGE_R,g.start,g.start+80*g.frac));
+  });
+  document.getElementById("amb-tp-topright").setAttribute("d", bezelTextPath(cx,cy,TEXT_R,330,60));
+  document.getElementById("amb-tp-bottom").setAttribute("d", bezelTextPath(cx,cy,TEXT_R,90,40));
+  document.getElementById("amb-tp-left").setAttribute("d", bezelTextPath(cx,cy,TEXT_R,210,72));
+
+  var ambientScreenEl = document.getElementById("ambientScreen");
+  var btnAmbActive = document.getElementById("btnAmbActive");
+  var btnAmbAmbient = document.getElementById("btnAmbAmbient");
+  var ambGridSlow = document.getElementById("ambGridSlow");
+  var ambGridFast = document.getElementById("ambGridFast");
+
+  function setAmbientMode(mode){
+    var isAmbient = mode === "ambient";
+    ambientScreenEl.setAttribute("data-mode", mode);
+    ambGridSlow.style.display = isAmbient ? "none" : "";
+    ambGridFast.style.display = isAmbient ? "none" : "";
+
+    var strokeW = isAmbient ? 4 : 20;
+    var gray = "var(--ink-dim)";
+    document.getElementById("amb-track-hp").setAttribute("stroke", isAmbient ? "transparent" : "var(--gold)");
+    document.getElementById("amb-track-hp").setAttribute("stroke-opacity", isAmbient ? "0" : "0.18");
+    document.getElementById("amb-track-hp").setAttribute("stroke-width", strokeW);
+    var arcColors = { "amb-arc-hp":"var(--gold)", "amb-arc-ack":"var(--purple)", "amb-arc-flux":"var(--cyan)" };
+    Object.keys(arcColors).forEach(function(id){
+      var el = document.getElementById(id);
+      el.setAttribute("stroke-width", strokeW);
+      el.setAttribute("stroke", isAmbient ? gray : arcColors[id]);
+    });
+
+    document.getElementById("ambGaugeGroup").style.display = isAmbient ? "none" : "";
+    document.getElementById("ambGaugeCircle").style.display = isAmbient ? "" : "none";
+
+    var tr = document.querySelector("#ambTextTopright textPath");
+    var bo = document.querySelector("#ambTextBottom textPath");
+    var le = document.querySelector("#ambTextLeft textPath");
+    if (isAmbient){
+      tr.innerHTML = '<tspan fill="'+gray+'">H2O NOM   </tspan><tspan fill="'+gray+'" font-size="15">HP 65   </tspan><tspan fill="'+gray+'">REQ MEAL</tspan>';
+      bo.innerHTML = '<tspan fill="'+gray+'">HOME</tspan>';
+      le.innerHTML = '<tspan fill="'+gray+'" font-weight="700">THROB </tspan><tspan fill="'+gray+'" font-weight="600">// 80 BPM // 100% // SLP</tspan>';
+    } else {
+      tr.innerHTML = '<tspan fill="var(--cyan)">H2O NOM   </tspan><tspan fill="var(--gold)" font-size="15">HP 65   </tspan><tspan fill="var(--orange)">REQ MEAL</tspan>';
+      bo.innerHTML = '<tspan fill="var(--purple)">HOME</tspan>';
+      le.innerHTML = '<tspan fill="var(--cyan)" font-weight="700">THROB </tspan><tspan fill="var(--cyan)" font-weight="600">// 80 BPM // 100% // SLP</tspan>';
+    }
+
+    var clockEl = document.getElementById("ambClockTime");
+    var secsEl = document.getElementById("ambClockSecs");
+    if (isAmbient){
+      clockEl.setAttribute("fill", "none");
+      clockEl.setAttribute("stroke", "#fff");
+      clockEl.setAttribute("stroke-width", "1.2");
+      clockEl.removeAttribute("filter");
+      secsEl.style.display = "none";
+    } else {
+      clockEl.setAttribute("fill", "var(--cyan)");
+      clockEl.removeAttribute("stroke");
+      clockEl.setAttribute("filter", "url(#clockGlow)");
+      secsEl.style.display = "";
+    }
+
+    btnAmbActive.setAttribute("aria-pressed", String(!isAmbient));
+    btnAmbAmbient.setAttribute("aria-pressed", String(isAmbient));
+  }
+  document.getElementById("ambClockTime").textContent = document.getElementById("clockTime") ? document.getElementById("clockTime").textContent : "06:02";
+  document.getElementById("ambClockSecs").textContent = document.getElementById("clockSecs") ? document.getElementById("clockSecs").textContent : "";
+  setAmbientMode("active");
+  if (btnAmbActive) btnAmbActive.addEventListener("click", function(){ setAmbientMode("active"); });
+  if (btnAmbAmbient) btnAmbAmbient.addEventListener("click", function(){ setAmbientMode("ambient"); });
+  setInterval(function(){
+    var t = document.getElementById("clockTime"), s = document.getElementById("clockSecs");
+    if (t) document.getElementById("ambClockTime").textContent = t.textContent;
+    if (s) document.getElementById("ambClockSecs").textContent = s.textContent;
+  }, 1000);
+
+  // ---- Deck 7: Configuration ----
+  // Same start/sweep angles as the watch face's own arcs -- WedgeRingPreview.kt
+  // pulls these from the real drawArc calls rather than a naive 0/120/240 split.
+  document.getElementById("cfgRingVitality").setAttribute("d", arcPath(110,110,78,-87,27));
+  document.getElementById("cfgRingAck").setAttribute("d", arcPath(110,110,78,33,147));
+  document.getElementById("cfgRingFlux").setAttribute("d", arcPath(110,110,78,153,267));
+
+  var lastSyncedEl = document.getElementById("cfgLastSynced");
+  if (lastSyncedEl){
+    var now = new Date();
+    lastSyncedEl.textContent = "LAST SYNCED: " + now.toLocaleString(undefined, { dateStyle:"medium", timeStyle:"short" });
+  }
+
+  var cfgPushBtn = document.getElementById("cfgPushBtn");
+  var cfgBackdrop = document.getElementById("cfgModalBackdrop");
+  var cfgCancelBtn = document.getElementById("cfgCancelBtn");
+  var cfgConfirmBtn = document.getElementById("cfgConfirmBtn");
+  var cfgToast = document.getElementById("cfgToast");
+  if (cfgPushBtn && cfgBackdrop){
+    cfgPushBtn.addEventListener("click", function(){ cfgBackdrop.classList.add("is-open"); });
+    cfgCancelBtn.addEventListener("click", function(){ cfgBackdrop.classList.remove("is-open"); });
+    cfgConfirmBtn.addEventListener("click", function(){
+      cfgBackdrop.classList.remove("is-open");
+      if (lastSyncedEl) lastSyncedEl.textContent = "LAST SYNCED: " + new Date().toLocaleString(undefined, { dateStyle:"medium", timeStyle:"short" });
+      cfgToast.classList.add("is-shown");
+      setTimeout(function(){ cfgToast.classList.remove("is-shown"); }, 1800);
+    });
+  }
+
+  // ---- Deck 8: Wedge Editor ----
+  var editorTabFunction = document.getElementById("editorTabFunction");
+  var editorTabShortcut = document.getElementById("editorTabShortcut");
+  var editorFunctionPane = document.getElementById("editorFunctionPane");
+  var editorShortcutPane = document.getElementById("editorShortcutPane");
+  var editorSaveBtn = document.getElementById("editorSaveBtn");
+  var shortcutLabelField = document.getElementById("shortcutLabelField");
+  var shortcutAppChosen = false;
+
+  function currentEditorMode(){
+    return editorTabFunction.getAttribute("aria-pressed") === "true" ? "function" : "shortcut";
+  }
+  function updateSaveState(){
+    if (currentEditorMode() === "function"){
+      editorSaveBtn.disabled = false;
+    } else {
+      editorSaveBtn.disabled = !(shortcutAppChosen && shortcutLabelField.value.trim() !== "");
+    }
+  }
+  function setEditorMode(mode){
+    var isFn = mode === "function";
+    editorTabFunction.setAttribute("aria-pressed", String(isFn));
+    editorTabShortcut.setAttribute("aria-pressed", String(!isFn));
+    editorFunctionPane.style.display = isFn ? "" : "none";
+    editorShortcutPane.style.display = isFn ? "none" : "";
+    updateSaveState();
+  }
+  editorTabFunction.addEventListener("click", function(){ setEditorMode("function"); });
+  editorTabShortcut.addEventListener("click", function(){ setEditorMode("shortcut"); });
+
+  var selectedFunction = "ACK";
+  var funcRows = {
+    VITALITY: document.getElementById("funcRowVitality"),
+    ACK: document.getElementById("funcRowAck"),
+    FLUX: document.getElementById("funcRowFlux")
+  };
+  var occupantOf = { VITALITY: "Wedge 1", FLUX: "Wedge 3" };
+  function selectFunction(name){
+    selectedFunction = name;
+    Object.keys(funcRows).forEach(function(k){ funcRows[k].setAttribute("aria-pressed", String(k === name)); });
+  }
+  Object.keys(funcRows).forEach(function(k){
+    funcRows[k].addEventListener("click", function(){ selectFunction(k); });
+  });
+
+  var editorModalBackdrop = document.getElementById("editorModalBackdrop");
+  var editorModalTitle = document.getElementById("editorModalTitle");
+  var editorModalBody = document.getElementById("editorModalBody");
+  editorSaveBtn.addEventListener("click", function(){
+    if (editorSaveBtn.disabled) return;
+    if (currentEditorMode() === "function" && occupantOf[selectedFunction]){
+      var occupant = occupantOf[selectedFunction];
+      editorModalTitle.textContent = "Move " + selectedFunction + "?";
+      editorModalBody.textContent = selectedFunction + " is currently on " + occupant +
+        ". Saving will move it here and give " + occupant + " what's currently on Wedge 2.";
+      editorModalBackdrop.classList.add("is-open");
+    }
+  });
+  document.getElementById("editorModalCancel").addEventListener("click", function(){
+    editorModalBackdrop.classList.remove("is-open");
+  });
+  document.getElementById("editorModalSwap").addEventListener("click", function(){
+    editorModalBackdrop.classList.remove("is-open");
+  });
+
+  // Nested app picker -- a compact stand-in for AppPickerDialog's own
+  // full-screen search+list, opened from inside this dialog the same way
+  // the real app does.
+  var shortcutChooseBtn = document.getElementById("shortcutChooseBtn");
+  var appPickerMini = document.getElementById("appPickerMini");
+  var shortcutChooseLabel = document.getElementById("shortcutChooseLabel");
+  shortcutChooseBtn.addEventListener("click", function(e){
+    e.stopPropagation();
+    appPickerMini.style.display = appPickerMini.style.display === "none" ? "block" : "none";
+  });
+  document.querySelectorAll(".app-picker-row").forEach(function(row){
+    row.addEventListener("click", function(){
+      var name = row.getAttribute("data-app");
+      shortcutChooseLabel.textContent = "APP: " + name.toUpperCase();
+      shortcutAppChosen = true;
+      appPickerMini.style.display = "none";
+      if (shortcutLabelField.value.trim() === "") shortcutLabelField.value = name.toUpperCase();
+      updateSaveState();
+    });
+  });
+  document.addEventListener("click", function(e){
+    if (!e.target.closest(".app-picker-mini") && e.target !== shortcutChooseBtn) {
+      appPickerMini.style.display = "none";
+    }
+  });
+  shortcutLabelField.addEventListener("input", updateSaveState);
+
+  // Eight named presets, exactly ColorSwatchPicker.kt's ShortcutColorPresets.
+  var presetNames = ["CYAN","PURPLE","RED","GREEN","PINK","ORANGE","BLUE","GOLD"];
+  var presetColors = ["var(--cyan)","var(--purple)","var(--red)","var(--green)","var(--pink)","var(--orange)","#2962ff","var(--gold)"];
+  var swatchRow = document.getElementById("swatchRow");
+  presetNames.forEach(function(name, i){
+    var dot = document.createElement("div");
+    dot.className = "swatch-dot";
+    dot.style.background = presetColors[i];
+    dot.setAttribute("role", "button");
+    dot.setAttribute("aria-pressed", i === 0 ? "true" : "false");
+    dot.setAttribute("aria-label", name);
+    dot.addEventListener("click", function(){
+      document.querySelectorAll(".swatch-dot").forEach(function(d){ d.setAttribute("aria-pressed","false"); });
+      dot.setAttribute("aria-pressed","true");
+    });
+    swatchRow.appendChild(dot);
+  });
+  updateSaveState();
+})();
+</script>
+</body>
+</html>

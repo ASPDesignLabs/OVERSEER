@@ -144,6 +144,7 @@ class MainActivity : ComponentActivity() {
         )
 
         var showAckOverlay by remember { mutableStateOf(false) }
+        var showTargetComputerOverlay by remember { mutableStateOf(false) }
         var showLauncherOverlay by remember { mutableStateOf(false) }
         var emergencyTarget by remember { mutableStateOf<String?>(null) }
 
@@ -298,13 +299,29 @@ class MainActivity : ComponentActivity() {
             if (showAckOverlay) {
                 AckControlOverlay(
                     currentDeck = state.ackDeckName,
-                    currentTarget = state.ackTargetName,
-                    targetLabels = state.targetMap,
                     currentColor = state.ackColorInt,
                     isCryo = state.ackDeckName == "SLEEP" ||
                             state.ackDeckName == "CRYO",
+                    hasComputerData = state.computerCategories.isNotEmpty(),
+                    onOpenTargetComputer = {
+                        showAckOverlay = false
+                        showTargetComputerOverlay = true
+                    },
                     onDismiss = {
                         showAckOverlay = false
+                    }
+                )
+            }
+
+            if (showTargetComputerOverlay) {
+                TargetComputerOverlay(
+                    categories = state.computerCategories,
+                    onPick = { categoryId, nodeId ->
+                        sendAckCommand(context, "SET_COMPUTER_PICK:$categoryId|$nodeId")
+                        showTargetComputerOverlay = false
+                    },
+                    onDismiss = {
+                        showTargetComputerOverlay = false
                     }
                 )
             }

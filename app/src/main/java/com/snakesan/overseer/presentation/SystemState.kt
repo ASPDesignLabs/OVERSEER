@@ -93,6 +93,7 @@ class OverseerState(context: Context) {
     var ackTargetName by mutableStateOf(prefs.getString(KEY_TARGET_NAME, "NONE") ?: "NONE")
     var ackOffline by mutableStateOf(false)
     val targetMap = mutableStateMapOf<Int, String>()
+    val computerCategories = mutableStateMapOf<String, SyncedComputerCategory>()
 
     // Flux
     var fluxMode by mutableStateOf(
@@ -141,6 +142,10 @@ class OverseerState(context: Context) {
         // Load target cache
         val raw = prefs.getString(KEY_TARGET_CACHE, "") ?: ""
         parseTargetsToMap(raw, targetMap)
+
+        // Load Target Computer cache (relayed from ACK via ACK Wear)
+        val rawComputer = prefs.getString(KEY_COMPUTER_CATEGORIES_CACHE, "") ?: ""
+        computerCategories.putAll(parseComputerCategories(rawComputer))
     }
 
 
@@ -273,6 +278,13 @@ fun rememberOverseerState(
                                 state.parseTargetsToMap(rawList, state.targetMap)
                             }
 
+                            "ACK_COMPUTER_SYNC" -> {
+                                val rawCategories = it.getStringExtra("raw_categories") ?: ""
+                                editor.putString(KEY_COMPUTER_CATEGORIES_CACHE, rawCategories).apply()
+                                state.computerCategories.clear()
+                                state.computerCategories.putAll(parseComputerCategories(rawCategories))
+                            }
+
                             "FLUX" -> {
                                 state.fluxOffline = false
 
@@ -362,6 +374,7 @@ fun rememberOverseerState(
         val filter = IntentFilter().apply {
             addAction(ACTION_UPDATE_STATUS)
             addAction(ACTION_SYNC_TARGETS)
+            addAction(ACTION_SYNC_COMPUTER)
         }
 
         val flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {

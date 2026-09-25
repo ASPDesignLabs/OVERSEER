@@ -728,9 +728,13 @@ fun OverseerGrid(
             CurvedLayout(anchor = 90f) {
                 curvedColumn(modifier = CurvedModifier.padding(radial = 5.dp)) {
                     curvedText(state.ackDeckName, color = currentAckColor.let { if (it == Color.Transparent) Color.Gray else it }, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                    if (state.ackTargetName != "NONE" && state.ackTargetName != "-1") {
+                    // Target Computer's active pick (first synced category that
+                    // has one) replaces the old flat-target name here -- see
+                    // SystemState.kt's computerCategories, fed via ACK Wear's relay.
+                    val activeComputerLabel = state.computerCategories.values.firstNotNullOfOrNull { it.activeNodeLabel() }
+                    if (activeComputerLabel != null) {
                         val wedgeColor = if (isAmbient) Color.Gray else NeonGreenVal
-                        curvedText(text = ">> ${state.ackTargetName}", color = wedgeColor, fontSize = 10.sp, fontWeight = FontWeight.Normal)
+                        curvedText(text = ">> $activeComputerLabel", color = wedgeColor, fontSize = 10.sp, fontWeight = FontWeight.Normal)
                     }
                     if (state.ackOffline) curvedText("OFFLINE", color = if (isAmbient) Color.White else NeonRed, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                 }

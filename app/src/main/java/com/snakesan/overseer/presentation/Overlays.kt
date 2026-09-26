@@ -372,7 +372,9 @@ fun AckControlOverlay(
     currentColor: Int,
     isCryo: Boolean,
     hasComputerData: Boolean,
+    hasAllComputerData: Boolean,
     onOpenTargetComputer: () -> Unit,
+    onOpenAllTargets: () -> Unit,
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
@@ -430,6 +432,23 @@ fun AckControlOverlay(
         }
 
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            if (hasAllComputerData) {
+                Text(
+                    "[ ALL TARGETS ]",
+                    color = NeonCyanVal.copy(alpha = 0.8f),
+                    fontSize = 8.sp,
+                    fontFamily = CyberFont,
+                    letterSpacing = 0.5.sp,
+                    modifier = Modifier
+                        .clickable {
+                            vibrator.vibrate(VibrationEffect.createOneShot(30, VibrationEffect.DEFAULT_AMPLITUDE))
+                            MiniSynth.playTone(2400f, 40)
+                            onOpenAllTargets()
+                        }
+                        .padding(bottom = 6.dp)
+                )
+            }
+
             Text(
                 "DECK // CONTROL",
                 color = primaryColor,
@@ -456,7 +475,7 @@ fun AckControlOverlay(
                     .padding(horizontal = 12.dp, vertical = 4.dp)
             )
 
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(6.dp))
 
             Row(modifier = Modifier.width(100.dp), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text("<", color = primaryColor.copy(alpha=0.5f), fontFamily = CyberFont)
@@ -470,8 +489,8 @@ fun AckControlOverlay(
 
         val cryoColor = if(isCryo) NeonBlue else NeonRed
         Row(
-            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 20.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 26.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             if (hasComputerData) {
                 CyberButton(
@@ -481,12 +500,12 @@ fun AckControlOverlay(
                         onOpenTargetComputer()
                     },
                     color = NeonGreenVal,
-                    modifier = Modifier.height(35.dp).width(90.dp)
+                    modifier = Modifier.height(34.dp).width(78.dp)
                 ) {
                     Text(
                         "TARGET CMP",
                         color = NeonGreenVal,
-                        fontSize = 9.sp,
+                        fontSize = 8.sp,
                         fontWeight = FontWeight.Bold,
                         fontFamily = CyberFont
                     )
@@ -500,12 +519,12 @@ fun AckControlOverlay(
                     MiniSynth.playTone(150f, 200)
                 },
                 color = cryoColor,
-                modifier = Modifier.height(35.dp).width(90.dp)
+                modifier = Modifier.height(34.dp).width(78.dp)
             ) {
                  Text(
                      if(isCryo) "WAKE SYS" else "INIT CRYO",
                      color = if(isCryo) NeonBlue else Color.White,
-                     fontSize = 10.sp,
+                     fontSize = 9.sp,
                      fontWeight = FontWeight.Bold,
                      fontFamily = CyberFont
                  )

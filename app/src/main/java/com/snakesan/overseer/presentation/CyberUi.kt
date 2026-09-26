@@ -70,18 +70,23 @@ fun CyberButton(
             .padding(horizontal = 12.dp, vertical = 8.dp), // Inner padding
         contentAlignment = Alignment.Center
     ) {
-        // Decorative corner lines (tech bits)
+        // Decorative corner lines (tech bits). Sized as a fraction of this
+        // button's own height rather than fixed pixel constants -- fixed
+        // 25px/10px offsets were tuned for a ~50dp button and land mid-button
+        // instead of at a corner on a smaller one (e.g. AckControlOverlay's
+        // 34dp-tall two-button row).
         Box(
             modifier = Modifier
                 .matchParentSize()
                 .drawBehind {
                     val w = size.width
                     val h = size.height
-                    val s = 10f // line length
+                    val inset = (h * 0.3f).coerceAtMost(25f)
+                    val s = (h * 0.12f).coerceAtMost(10f) // line length
                     // Top Left Accent
-                    drawLine(color, Offset(0f, 25f), Offset(0f, 25f+s), 3f)
+                    drawLine(color, Offset(0f, inset), Offset(0f, inset + s), 3f)
                     // Bottom Right Accent
-                    drawLine(color, Offset(w, h-25f), Offset(w, h-25f-s), 3f)
+                    drawLine(color, Offset(w, h - inset), Offset(w, h - inset - s), 3f)
                 }
         )
         text()

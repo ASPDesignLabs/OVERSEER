@@ -17,6 +17,7 @@ const val ACTION_UPDATE_STATUS = "com.snakesan.overseer.UPDATE_STATUS"
 const val ACTION_KILL_SERVICE = "com.snakesan.overseer.KILL_COMMAND"
 const val ACTION_SYNC_TARGETS = "com.snakesan.overseer.SYNC_TARGETS"
 const val ACTION_SYNC_COMPUTER = "com.snakesan.overseer.SYNC_COMPUTER"
+const val ACTION_SYNC_COMPUTER_ALL = "com.snakesan.overseer.SYNC_COMPUTER_ALL"
 const val ACTION_ACK_CONTROL = "com.snakesan.overseer.ACK_CONTROL"
 
 const val PKG_VITALITY = "com.snakesan.vitalitysys"
@@ -37,6 +38,8 @@ const val KEY_OVERCHARGE = "cached_overcharge"
 const val KEY_TARGET_NAME = "cached_target_name"
 const val KEY_TARGET_CACHE = "cached_target_list_raw"
 const val KEY_COMPUTER_CATEGORIES_CACHE = "cached_computer_categories_raw"
+const val KEY_COMPUTER_CATEGORIES_ALL_CACHE = "cached_computer_categories_all_raw"
+const val KEY_LAST_ACTIVE_COMPUTER_CATEGORY = "last_active_computer_category_id"
 
 const val KEY_COLOR_HOLD_SECONDS = "color_hold_seconds"
 

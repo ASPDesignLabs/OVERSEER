@@ -1,12 +1,7 @@
 package com.snakesan.overseer.presentation
 
-import android.content.Context
 import android.graphics.BlurMaskFilter
 import android.graphics.RuntimeShader
-import android.hardware.Sensor
-import android.hardware.SensorEvent
-import android.hardware.SensorEventListener
-import android.hardware.SensorManager
 import android.os.Build
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
@@ -32,7 +27,6 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.drawscope.translate
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
@@ -72,33 +66,15 @@ fun OverseerGrid(
         label = "grid_animations"
     )
 
-    val gridOffsetSlow by if (shouldAnimate) {
-        infiniteTransition.animateFloat(
-            initialValue = 0f,
-            targetValue = 40f,
-            animationSpec = infiniteRepeatable(
-                animation = tween(8_000, easing = LinearEasing),
-                repeatMode = RepeatMode.Restart
-            ),
-            label = "grid_offset_slow"
-        )
-    } else {
-        remember { mutableFloatStateOf(0f) }
-    }
-
-    val gridOffsetFast by if (shouldAnimate) {
-        infiniteTransition.animateFloat(
-            initialValue = 0f,
-            targetValue = 40f,
-            animationSpec = infiniteRepeatable(
-                animation = tween(3_000, easing = LinearEasing),
-                repeatMode = RepeatMode.Restart
-            ),
-            label = "grid_offset_fast"
-        )
-    } else {
-        remember { mutableFloatStateOf(0f) }
-    }
+    // Decorative background motion (grid drift, PCB/starfield/shimmer time)
+    // is permanently frozen for power -- these are plain constants, not
+    // animated state, so the grid/starfield draw loops and the (already
+    // dead, ENABLE_PCB_LAYOUT-gated) PCB code below render motionless
+    // instead of drifting. Only pulseAlpha stays a real animation: it drives
+    // the HP-critical/overcharge status pulse, a functional signal rather
+    // than ambience.
+    val gridOffsetSlow = 0f
+    val gridOffsetFast = 0f
 
     val pulseAlpha by if (shouldAnimate) {
         infiniteTransition.animateFloat(
@@ -118,19 +94,7 @@ fun OverseerGrid(
         remember { mutableFloatStateOf(1f) }
     }
 
-    val timeFloat by if (shouldAnimate) {
-        infiniteTransition.animateFloat(
-            initialValue = 0f,
-            targetValue = 1000f,
-            animationSpec = infiniteRepeatable(
-                animation = tween(100_000, easing = LinearEasing),
-                repeatMode = RepeatMode.Restart
-            ),
-            label = "grid_time"
-        )
-    } else {
-        remember { mutableFloatStateOf(0f) }
-    }
+    val timeFloat = 0f
 
     val NeonGold = Color(0xFFFFD700)
     val rawHpColor = when {
@@ -177,38 +141,18 @@ fun OverseerGrid(
         }
     }
 
-    // Sensors
-    val context = LocalContext.current
-    var tiltX by remember { mutableFloatStateOf(0f) }
-    var tiltY by remember { mutableFloatStateOf(0f) }
-
-    if (shouldAnimate) {
-        DisposableEffect(Unit) {
-            val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
-            val sensor = sensorManager.getDefaultSensor(Sensor.TYPE_GRAVITY)
-
-            val listener = object : SensorEventListener {
-                override fun onSensorChanged(event: SensorEvent) {
-                    tiltX = event.values[0]
-                    tiltY = event.values[1]
-                }
-                override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
-            }
-
-            sensorManager.registerListener(
-                listener,
-                sensor,
-                SensorManager.SENSOR_DELAY_NORMAL
-            )
-            onDispose { sensorManager.unregisterListener(listener) }
-        }
-    }
+    // Sensors -- the gravity listener that used to feed tiltX/tiltY has been
+    // removed for power: its only consumers below (bgParallax*/fgParallax*/
+    // shadowOffset*) were already permanently zero regardless, since
+    // isPcbMode can never be true while PCB mode is force-disabled
+    // (ENABLE_PCB_LAYOUT = false) -- it was a live sensor registration
+    // costing battery for zero visual effect. tiltX/tiltY are now static.
+    val tiltX = 0f
+    val tiltY = 0f
 
     // Depth Effects
-    // Depth Effects
-//
-// Parallax belongs exclusively to the PCB experience. Grid and starfield
-// keep the clock and internal meters locked to the face center.
+    // Parallax belongs exclusively to the PCB experience. Grid and starfield
+    // keep the clock and internal meters locked to the face center.
     val isPcbMode = shouldAnimate && renderedBgMode == 1
 
     val bgParallaxX = if (isPcbMode) {
@@ -278,44 +222,6 @@ fun OverseerGrid(
                     half3 baseColor = hsv2rgb(half3(hue, 1.0, 0.5));
                     
                     return half4(baseColor, 0.7);
-                }
-            """.trimIndent())
-        } else null
-    }
-
-    val shimmerShader = remember {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            RuntimeShader("""
-                uniform float2 resolution;
-                uniform float2 tilt;
-                uniform float currentTranslate;
-                uniform float time;
-                
-                half4 main(float2 fragCoord) {
-                    float2 screenCoord = fragCoord;
-                    screenCoord.x += currentTranslate;
-                    float2 uv = screenCoord / resolution;
-                    
-                    float2 sCenter = float2(0.5, 0.5) - (tilt * 0.08);
-                    
-                    float sAngle = 0.785 + (tilt.x * 0.06); 
-                    float ss = sin(sAngle);
-                    float sc = cos(sAngle);
-                    float2 sCUv = uv - sCenter;
-                    float2 sRUv = float2(sCUv.x * sc - sCUv.y * ss, sCUv.x * ss + sCUv.y * sc);
-                    
-                    float sAngle2 = -0.5 - (tilt.x * 0.04); 
-                    float ss2 = sin(sAngle2);
-                    float sc2 = cos(sAngle2);
-                    float2 sRUv2 = float2(sCUv.x * sc2 - sCUv.y * ss2, sCUv.x * ss2 + sCUv.y * sc2);
-                    
-                    float beam1 = 1.0 - smoothstep(0.0, 0.25, abs(sRUv.x));
-                    float beam2 = 1.0 - smoothstep(0.0, 0.4, abs(sRUv2.x + sin(time * 0.05) * 0.2));
-                    
-                    float caustic = beam1 * (0.4 + (1.0 - beam2) * 0.6);
-                    caustic *= 0.95; 
-                    
-                    return half4(caustic, caustic, caustic, caustic * 0.8);
                 }
             """.trimIndent())
         } else null
@@ -545,80 +451,11 @@ fun OverseerGrid(
             } else { drawCircle(color = Color.Black) }
         }
 
-        // ==========================================
-        // LAYER 2: SHIMMER, DUST, AND VIGNETTE
-        // ==========================================
-        val shimmerLayerBlurRadius = 0.dp
-
-        if (!isAmbient && state.bgMode == 1) {
-            Canvas(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .then(
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && shimmerLayerBlurRadius > 0.dp) {
-                            Modifier.blur(shimmerLayerBlurRadius, edgeTreatment = BlurredEdgeTreatment.Unbounded)
-                        } else Modifier
-                    )
-            ) {
-                val w = size.width
-                val h = size.height
-
-                translate(left = bgParallaxX, top = bgParallaxY) {
-                    val pcbPathToDraw = PcbPathCache.cachedBasePath ?: Path()
-
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && shimmerShader != null) {
-                        shimmerShader.setFloatUniform("resolution", w, h)
-                        shimmerShader.setFloatUniform("tilt", tiltX, tiltY)
-                        shimmerShader.setFloatUniform("time", timeFloat)
-                        shimmerShader.setFloatUniform("currentTranslate", 0f)
-                        drawPath(pcbPathToDraw, ShaderBrush(shimmerShader), style = Stroke(width = 3f, cap = StrokeCap.Round, join = StrokeJoin.Round), blendMode = BlendMode.Plus)
-                    } else {
-                        val shimmerTiltOffsetMultiplier = 40f
-                        val shimmerCenterX = (w / 2f) - (tiltX * shimmerTiltOffsetMultiplier)
-                        val shimmerCenterY = (h / 2f) - (tiltY * shimmerTiltOffsetMultiplier)
-                        val beamAngle = (Math.PI / 4) + (tiltX / 15f)
-                        val beamSpread = w * 1.2f
-
-                        val shimmerBrush = Brush.linearGradient(
-                            0.0f to Color.Transparent, 0.45f to Color(0x1AFFFFFF),
-                            0.5f to Color(0xE6FFFFFF), 0.55f to Color(0x1AFFFFFF), 1.0f to Color.Transparent,
-                            start = Offset(shimmerCenterX - (cos(beamAngle) * beamSpread).toFloat(), shimmerCenterY - (sin(beamAngle) * beamSpread).toFloat()),
-                            end = Offset(shimmerCenterX + (cos(beamAngle) * beamSpread).toFloat(), shimmerCenterY + (sin(beamAngle) * beamSpread).toFloat())
-                        )
-                        drawPath(pcbPathToDraw, shimmerBrush, style = Stroke(width = 3f, cap = StrokeCap.Round, join = StrokeJoin.Round), blendMode = BlendMode.Plus)
-                    }
-                }
-
-                // Data Dust
-                val midParallaxX = bgParallaxX * 0.5f
-                val midParallaxY = bgParallaxY * 0.5f
-                val dustSpeed = 1.2f
-                val dustOffset = -(timeFloat * dustSpeed) % w
-
-                translate(left = midParallaxX, top = midParallaxY) {
-                    var seed = 12345
-                    fun dRand(max: Float): Float {
-                        seed = (seed * 1103515245 + 12345) and 0x7FFFFFFF
-                        return (seed % 1000) / 1000f * max
-                    }
-                    for (i in 0..15) {
-                        val dx = (dRand(w) + dustOffset + (i * 30f)) % w
-                        val dy = dRand(h)
-                        val actualX = if (dx < 0) dx + w else dx
-                        val size = 1.5f + dRand(1.5f)
-                        drawCircle(NeonCyanVal.copy(alpha = 0.4f), radius = size, center = Offset(actualX, dy), blendMode = BlendMode.Plus)
-                    }
-                }
-
-                val vignetteCenter = Offset((w / 2f) + (tiltX * 10f), (h / 2f) + (tiltY * 10f))
-                val vignetteBrush = Brush.radialGradient(
-                    colors = listOf(Color.Transparent, Color.Transparent, Color.Black.copy(alpha = 0.85f)),
-                    center = vignetteCenter,
-                    radius = w * 0.55f
-                )
-                drawRect(brush = vignetteBrush)
-            }
-        }
+        // LAYER 2 (SHIMMER, DUST, AND VIGNETTE) removed -- it was a purely
+        // decorative, animated overlay (shimmer sweep + drifting dust +
+        // vignette), all driven by the now-frozen tiltX/tiltY/timeFloat.
+        // Note this also drops the static vignette corner-dimming that used
+        // to come bundled with it -- the three were one animated unit.
 
         // ==========================================
         // LAYER 3: FOREGROUND (Sharp UI Elements + Shadows)
@@ -728,9 +565,13 @@ fun OverseerGrid(
             CurvedLayout(anchor = 90f) {
                 curvedColumn(modifier = CurvedModifier.padding(radial = 5.dp)) {
                     curvedText(state.ackDeckName, color = currentAckColor.let { if (it == Color.Transparent) Color.Gray else it }, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                    if (state.ackTargetName != "NONE" && state.ackTargetName != "-1") {
+                    // Target Computer's active pick (first synced category that
+                    // has one) replaces the old flat-target name here -- see
+                    // SystemState.kt's computerCategories, fed via ACK Wear's relay.
+                    val activeComputerLabel = state.computerCategories.values.firstNotNullOfOrNull { it.activeNodeLabel() }
+                    if (activeComputerLabel != null) {
                         val wedgeColor = if (isAmbient) Color.Gray else NeonGreenVal
-                        curvedText(text = ">> ${state.ackTargetName}", color = wedgeColor, fontSize = 10.sp, fontWeight = FontWeight.Normal)
+                        curvedText(text = ">> $activeComputerLabel", color = wedgeColor, fontSize = 10.sp, fontWeight = FontWeight.Normal)
                     }
                     if (state.ackOffline) curvedText("OFFLINE", color = if (isAmbient) Color.White else NeonRed, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                 }

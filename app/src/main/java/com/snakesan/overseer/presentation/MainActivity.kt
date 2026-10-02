@@ -144,6 +144,8 @@ class MainActivity : ComponentActivity() {
         )
 
         var showAckOverlay by remember { mutableStateOf(false) }
+        var showTargetComputerOverlay by remember { mutableStateOf(false) }
+        var showAllTargetsOverlay by remember { mutableStateOf(false) }
         var showLauncherOverlay by remember { mutableStateOf(false) }
         var emergencyTarget by remember { mutableStateOf<String?>(null) }
 
@@ -298,13 +300,47 @@ class MainActivity : ComponentActivity() {
             if (showAckOverlay) {
                 AckControlOverlay(
                     currentDeck = state.ackDeckName,
-                    currentTarget = state.ackTargetName,
-                    targetLabels = state.targetMap,
                     currentColor = state.ackColorInt,
                     isCryo = state.ackDeckName == "SLEEP" ||
                             state.ackDeckName == "CRYO",
+                    hasComputerData = state.computerCategories.isNotEmpty(),
+                    hasAllComputerData = state.allComputerCategories.isNotEmpty(),
+                    onOpenTargetComputer = {
+                        showAckOverlay = false
+                        showTargetComputerOverlay = true
+                    },
+                    onOpenAllTargets = {
+                        showAckOverlay = false
+                        showAllTargetsOverlay = true
+                    },
                     onDismiss = {
                         showAckOverlay = false
+                    }
+                )
+            }
+
+            if (showTargetComputerOverlay) {
+                TargetComputerOverlay(
+                    categories = state.computerCategories,
+                    onPick = { categoryId, nodeId ->
+                        sendAckCommand(context, "SET_COMPUTER_PICK:$categoryId|$nodeId")
+                        showTargetComputerOverlay = false
+                    },
+                    onDismiss = {
+                        showTargetComputerOverlay = false
+                    }
+                )
+            }
+
+            if (showAllTargetsOverlay) {
+                TargetComputerOverlay(
+                    categories = state.allComputerCategories,
+                    onPick = { categoryId, nodeId ->
+                        sendAckCommand(context, "SET_COMPUTER_PICK:$categoryId|$nodeId")
+                        showAllTargetsOverlay = false
+                    },
+                    onDismiss = {
+                        showAllTargetsOverlay = false
                     }
                 )
             }

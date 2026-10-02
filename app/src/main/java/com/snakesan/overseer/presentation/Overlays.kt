@@ -1,7 +1,6 @@
 package com.snakesan.overseer.presentation
 
 import android.content.Context
-import android.content.Intent
 import android.os.VibrationEffect
 import android.os.Vibrator
 import androidx.compose.foundation.Canvas
@@ -19,7 +18,6 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.rotary.onRotaryScrollEvent
 import androidx.compose.ui.platform.LocalContext
@@ -364,41 +362,28 @@ fun EmergencyOverlay(target: String, onDismiss: () -> Unit, onConfirm: () -> Uni
 }
 
 // --- ACK CONTROL OVERLAY ---
+// TARGET mode (the old crown-cycled flat 8-slot picker, toggled by long-press)
+// has been retired from here -- Target Computer browsing now lives in its own
+// module (TargetComputerOverlay), opened via the dedicated button below. DECK
+// control (the deck selector) is unchanged.
 @Composable
 fun AckControlOverlay(
     currentDeck: String,
-    currentTarget: String,
-    targetLabels: Map<Int, String>,
     currentColor: Int,
     isCryo: Boolean,
+    hasComputerData: Boolean,
+    hasAllComputerData: Boolean,
+    onOpenTargetComputer: () -> Unit,
+    onOpenAllTargets: () -> Unit,
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
     val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
     val focusRequester = remember { FocusRequester() }
 
-    var controlMode by remember { mutableStateOf("DECK") }
-    var localTargetIndex by remember { mutableIntStateOf(0) }
-    val primaryColor = if(controlMode == "DECK") Color(currentColor) else NeonGreenVal
+    val primaryColor = Color(currentColor)
     var scrollAccumulator by remember { mutableFloatStateOf(0f) }
     val crownThreshold = 50f
-
-    // Helper to send commands to Besu (ACK)
-    fun sendCmd(cmd: String) {
-        val intent = Intent("com.snakesan.overseer.ACK_CONTROL")
-        intent.putExtra("CMD", cmd)
-        intent.setPackage(PKG_ACK)
-        context.sendBroadcast(intent)
-    }
-
-    // Helper for UI sounds
-    fun playFeedback(mode: String, index: Int) {
-        if (mode == "DECK") MiniSynth.playTone(2000f, 30)
-        else {
-            val freq = if (index >= 8) 1500f else 400f + (index * 100f)
-            MiniSynth.playTone(freq, 40)
-        }
-    }
 
     LaunchedEffect(Unit) { focusRequester.requestFocus() }
 
@@ -412,18 +397,9 @@ fun AckControlOverlay(
                     val direction = if (scrollAccumulator > 0) 1 else -1
                     scrollAccumulator = 0f
 
-                    if (controlMode == "DECK") {
-                        val cmd = if(direction > 0) "NEXT_DECK" else "PREV_DECK"
-                        sendCmd(cmd)
-                        playFeedback("DECK", 0)
-                    } else {
-                        val next = localTargetIndex + direction
-                        localTargetIndex = if(next > 8) 0 else if(next < 0) 8 else next
-                        
-                        val payload = if(localTargetIndex == 8) -1 else localTargetIndex
-                        sendCmd("SET_TARGET:$payload")
-                        playFeedback("TARGET", localTargetIndex)
-                    }
+                    val cmd = if (direction > 0) "NEXT_DECK" else "PREV_DECK"
+                    sendAckCommand(context, cmd)
+                    MiniSynth.playTone(2000f, 30)
                     vibrator.vibrate(VibrationEffect.createOneShot(10, VibrationEffect.DEFAULT_AMPLITUDE))
                 }
                 true
@@ -437,23 +413,11 @@ fun AckControlOverlay(
                         val direction = if(isRight) 1 else -1
 
                         if (offset.y < size.height * 0.7f) {
-                            if (controlMode == "DECK") {
-                                val cmd = if(direction > 0) "NEXT_DECK" else "PREV_DECK"
-                                sendCmd(cmd)
-                                playFeedback("DECK", 0)
-                            } else {
-                                val next = localTargetIndex + direction
-                                localTargetIndex = if(next > 8) 0 else if(next < 0) 8 else next
-                                val payload = if(localTargetIndex == 8) -1 else localTargetIndex
-                                sendCmd("SET_TARGET:$payload")
-                            }
+                            val cmd = if(direction > 0) "NEXT_DECK" else "PREV_DECK"
+                            sendAckCommand(context, cmd)
+                            MiniSynth.playTone(2000f, 30)
                             vibrator.vibrate(VibrationEffect.createOneShot(10, VibrationEffect.DEFAULT_AMPLITUDE))
                         }
-                    },
-                    onLongPress = {
-                        controlMode = if(controlMode == "DECK") "TARGET" else "DECK"
-                        vibrator.vibrate(VibrationEffect.createOneShot(50, VibrationEffect.DEFAULT_AMPLITUDE))
-                        MiniSynth.playTone(1800f, 80)
                     }
                 )
             },
@@ -466,89 +430,52 @@ fun AckControlOverlay(
                 drawLine(primaryColor.copy(alpha=0.1f), Offset(x, 0f), Offset(x, size.height), 1f)
             }
         }
-        
+
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    modifier = Modifier
-                        .size(width = 8.dp, height = 4.dp)
-                        .background(if(controlMode=="DECK") primaryColor else Color.DarkGray)
-                        .border(0.5.dp, primaryColor, RectangleShape) 
-                )
-                Spacer(modifier = Modifier.width(4.dp))
-                
+            if (hasAllComputerData) {
                 Text(
-                    if(controlMode=="DECK") "DECK // CONTROL" else "TARGET // LINK", 
-                    color = primaryColor, 
-                    fontSize = 10.sp, 
+                    "[ ALL TARGETS ]",
+                    color = NeonCyanVal.copy(alpha = 0.8f),
+                    fontSize = 8.sp,
                     fontFamily = CyberFont,
-                    letterSpacing = 1.sp
-                )
-                
-                Spacer(modifier = Modifier.width(4.dp))
-                Box(
+                    letterSpacing = 0.5.sp,
                     modifier = Modifier
-                        .size(width = 8.dp, height = 4.dp)
-                        .background(if(controlMode=="TARGET") primaryColor else Color.DarkGray)
-                        .border(0.5.dp, primaryColor, RectangleShape)
+                        .clickable {
+                            vibrator.vibrate(VibrationEffect.createOneShot(30, VibrationEffect.DEFAULT_AMPLITUDE))
+                            MiniSynth.playTone(2400f, 40)
+                            onOpenAllTargets()
+                        }
+                        .padding(bottom = 6.dp)
                 )
             }
+
+            Text(
+                "DECK // CONTROL",
+                color = primaryColor,
+                fontSize = 10.sp,
+                fontFamily = CyberFont,
+                letterSpacing = 1.sp
+            )
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            if (controlMode == "DECK") {
-                Text(
-                    text = if(isCryo) "SLEEPING" else currentDeck,
-                    style = TextStyle(
-                        color = primaryColor, 
-                        fontSize = 24.sp, 
-                        fontWeight = FontWeight.Bold, 
-                        fontFamily = CyberFont, 
-                        textAlign = TextAlign.Center,
-                        letterSpacing = 2.sp
-                    ),
-                    modifier = Modifier
-                        .padding(horizontal = 16.dp)
-                        .border(1.dp, primaryColor.copy(alpha=0.3f), CyberCutShape(10f))
-                        .padding(horizontal = 12.dp, vertical = 4.dp)
-                )
-            } else {
-                val isClear = localTargetIndex == 8
-                val rawLabel = targetLabels[localTargetIndex]
-                val nameText = if (isClear) "CLEAR" else (rawLabel ?: "EMPTY")
-                val subText = if (isClear) "DISENGAGE" else "SLOT [ ${localTargetIndex + 1} ]"
-
-                Text(
-                    text = nameText.uppercase(), 
-                    style = TextStyle(
-                        color = NeonGreenVal, 
-                        fontSize = if(nameText.length > 8) 20.sp else 28.sp, 
-                        fontWeight = FontWeight.Black, 
-                        fontFamily = CyberFont, 
-                        textAlign = TextAlign.Center
-                    )
-                )
-                Text(
-                    text = subText, 
-                    color = Color.Gray, 
-                    fontSize = 10.sp, 
-                    fontFamily = CyberFont, 
+            Text(
+                text = if(isCryo) "SLEEPING" else currentDeck,
+                style = TextStyle(
+                    color = primaryColor,
+                    fontSize = 24.sp,
                     fontWeight = FontWeight.Bold,
-                    letterSpacing = 1.sp
-                )
+                    fontFamily = CyberFont,
+                    textAlign = TextAlign.Center,
+                    letterSpacing = 2.sp
+                ),
+                modifier = Modifier
+                    .padding(horizontal = 16.dp)
+                    .border(1.dp, primaryColor.copy(alpha=0.3f), CyberCutShape(10f))
+                    .padding(horizontal = 12.dp, vertical = 4.dp)
+            )
 
-                if (currentTarget != "NONE" && currentTarget != "-1") {
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "LINKED: $currentTarget", 
-                        color = Color.DarkGray, 
-                        fontSize = 8.sp, 
-                        fontFamily = CyberFont
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(6.dp))
 
             Row(modifier = Modifier.width(100.dp), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text("<", color = primaryColor.copy(alpha=0.5f), fontFamily = CyberFont)
@@ -561,21 +488,44 @@ fun AckControlOverlay(
         }
 
         val cryoColor = if(isCryo) NeonBlue else NeonRed
-        Box(modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 20.dp)) {
+        Row(
+            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 26.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            if (hasComputerData) {
+                CyberButton(
+                    onClick = {
+                        vibrator.vibrate(VibrationEffect.createOneShot(50, VibrationEffect.DEFAULT_AMPLITUDE))
+                        MiniSynth.playTone(1800f, 80)
+                        onOpenTargetComputer()
+                    },
+                    color = NeonGreenVal,
+                    modifier = Modifier.height(34.dp).width(78.dp)
+                ) {
+                    Text(
+                        "TARGET CMP",
+                        color = NeonGreenVal,
+                        fontSize = 8.sp,
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = CyberFont
+                    )
+                }
+            }
+
             CyberButton(
-                onClick = { 
-                    sendCmd("CRYO_TOGGLE")
+                onClick = {
+                    sendAckCommand(context, "CRYO_TOGGLE")
                     vibrator.vibrate(VibrationEffect.createOneShot(50, VibrationEffect.DEFAULT_AMPLITUDE))
                     MiniSynth.playTone(150f, 200)
                 },
                 color = cryoColor,
-                modifier = Modifier.height(35.dp).width(90.dp)
+                modifier = Modifier.height(34.dp).width(78.dp)
             ) {
                  Text(
-                     if(isCryo) "WAKE SYS" else "INIT CRYO", 
-                     color = if(isCryo) NeonBlue else Color.White, 
-                     fontSize = 10.sp, 
-                     fontWeight = FontWeight.Bold, 
+                     if(isCryo) "WAKE SYS" else "INIT CRYO",
+                     color = if(isCryo) NeonBlue else Color.White,
+                     fontSize = 9.sp,
+                     fontWeight = FontWeight.Bold,
                      fontFamily = CyberFont
                  )
             }

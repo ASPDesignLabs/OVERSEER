@@ -1,5 +1,7 @@
 package com.snakesan.overseer.presentation
 
+import android.content.Context
+import android.content.Intent
 import android.media.AudioAttributes
 import android.media.AudioFormat
 import android.media.AudioTrack
@@ -14,6 +16,9 @@ import kotlin.math.sin
 const val ACTION_UPDATE_STATUS = "com.snakesan.overseer.UPDATE_STATUS"
 const val ACTION_KILL_SERVICE = "com.snakesan.overseer.KILL_COMMAND"
 const val ACTION_SYNC_TARGETS = "com.snakesan.overseer.SYNC_TARGETS"
+const val ACTION_SYNC_COMPUTER = "com.snakesan.overseer.SYNC_COMPUTER"
+const val ACTION_SYNC_COMPUTER_ALL = "com.snakesan.overseer.SYNC_COMPUTER_ALL"
+const val ACTION_ACK_CONTROL = "com.snakesan.overseer.ACK_CONTROL"
 
 const val PKG_VITALITY = "com.snakesan.vitalitysys"
 const val PKG_ACK = "com.example.besu"
@@ -32,6 +37,9 @@ const val KEY_MEAL_STATUS = "cached_meal_status"
 const val KEY_OVERCHARGE = "cached_overcharge"
 const val KEY_TARGET_NAME = "cached_target_name"
 const val KEY_TARGET_CACHE = "cached_target_list_raw"
+const val KEY_COMPUTER_CATEGORIES_CACHE = "cached_computer_categories_raw"
+const val KEY_COMPUTER_CATEGORIES_ALL_CACHE = "cached_computer_categories_all_raw"
+const val KEY_LAST_ACTIVE_COMPUTER_CATEGORY = "last_active_computer_category_id"
 
 const val KEY_COLOR_HOLD_SECONDS = "color_hold_seconds"
 
@@ -51,6 +59,19 @@ val NeonBlue = Color(0xFF2962FF)
 val NeonDarkVal = Color(0xFF121212)
 
 val CyberFont = FontFamily(Font(R.font.cyberfont))
+
+// --- ACK COMMAND BRIDGE ---
+// Sends a remote command to ACK Wear's BackgroundSensorService controlReceiver
+// (same wire shape it already accepts from AckControlOverlay: NEXT_DECK,
+// PREV_DECK, CRYO_TOGGLE, SET_TARGET:<index>, SET_COMPUTER_PICK:<categoryId>|<nodeId>).
+// Hoisted here so both AckControlOverlay and the Target Computer pick flow in
+// MainActivity share one broadcast-construction call instead of duplicating it.
+fun sendAckCommand(context: Context, cmd: String) {
+    val intent = Intent(ACTION_ACK_CONTROL)
+    intent.putExtra("CMD", cmd)
+    intent.setPackage(PKG_ACK)
+    context.sendBroadcast(intent)
+}
 
 // --- COLOR UTIL ---
 fun lerpColor(start: Color, end: Color, fraction: Float): Color {

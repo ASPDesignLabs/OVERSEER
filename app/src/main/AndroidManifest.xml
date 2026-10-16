@@ -17,6 +17,15 @@
     <uses-feature android:name="android.hardware.type.watch" />
     <uses-permission android:name="android.permission.VIBRATE" />
 
+    <!--
+      Lets OVERSEER send KILL_COMMAND to NeonFlux. NeonFlux declares this as a
+      signature-level permission and its kill receivers require it, so without
+      this line the broadcast is dropped. It is only granted when OVERSEER is
+      signed with the same certificate as NeonFlux AND NeonFlux was installed
+      first - if OVERSEER was already on the watch, reinstall it.
+    -->
+    <uses-permission android:name="com.snakesan.neonflux.permission.OVERSEER_CONTROL" />
+
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
